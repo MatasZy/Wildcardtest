@@ -43,8 +43,8 @@ button{
   transition:0.3s;
   border:1px solid rgba(255,255,255,0.1);
 }
-.statCard:hover{transform:translateY(-5px);background:rgba(255,255,255,0.12);}
-.statCard.big{background:linear-gradient(135deg,#00c853,#4caf50);font-weight:bold;}
+.statCard:hover{transform:translateY(-5px);}
+.statCard.big{background:linear-gradient(135deg,#00c853,#4caf50);}
 
 .statNumber{font-size:28px;font-weight:bold;margin-bottom:8px;}
 .statLabel{font-size:13px;opacity:0.8;}
@@ -69,8 +69,16 @@ img{
 }
 
 .nameCell{text-align:left;}
-.progressBar{width:100%;height:8px;background:rgba(255,255,255,0.2);border-radius:5px;overflow:hidden;margin-bottom:4px;}
-.progressFill{height:100%;background:linear-gradient(90deg,#81C784,#4CAF50);transition:width 0.5s ease;}
+
+.progressBar{
+  width:100%;height:8px;background:rgba(255,255,255,0.2);
+  border-radius:5px;overflow:hidden;margin-bottom:4px;
+}
+.progressFill{
+  height:100%;
+  background:linear-gradient(90deg,#81C784,#4CAF50);
+  transition:width 0.5s ease;
+}
 
 .firstPlace{background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);}
 .secondPlace{background:rgba(192,192,192,0.1);}
@@ -102,6 +110,7 @@ canvas{max-width:900px;margin:40px auto;}
 <h2>🏆 Balsavimo rezultatai</h2>
 <div id="lastUpdate"></div>
 <div id="countdown"></div>
+
 <button onclick="unlockAudio()">🔊 Įjungti garsą</button>
 
 <div class="stats">
@@ -131,14 +140,7 @@ canvas{max-width:900px;margin:40px auto;}
 <canvas id="pieChart"></canvas>
 
 <div id="toast"></div>
-
-<iframe id="spotifyPlayer"
-        style="display:none;"
-        width="0"
-        height="0"
-        frameborder="0"
-        allow="autoplay; encrypted-media">
-</iframe>
+<audio id="toastPlayer"></audio>
 
 <script>
 let previousVotes = {};
@@ -149,40 +151,38 @@ let pieChart;
 let toastTimeout;
 let audioUnlocked = false;
 
-const spotifyTracks = {
-  // ČIA gali priskirti dalyviams jų dainas
-  // Pvz:
-  // "Dalyvis Vardas": "3xwGHeuqhNf6DWJEqdXgcG"
+const player = document.getElementById("toastPlayer");
+
+/* PRISKIRK ČIA MP3 NUORODAS */
+const songPreviews = {
+  "Dalyvis 1": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+  "Dalyvis 2": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
 };
 
 function unlockAudio(){
   audioUnlocked = true;
+  player.play().then(()=>player.pause()).catch(()=>{});
   alert("Garsas įjungtas 🎵");
 }
 
-function playSpotify(trackId){
-  if(!audioUnlocked) return;
-  const player = document.getElementById("spotifyPlayer");
-  player.src = `https://open.spotify.com/embed/track/${trackId}?autoplay=1`;
-}
+function showToast(text, audioUrl){
+  const toast = document.getElementById("toast");
 
-function stopSpotify(){
-  const player = document.getElementById("spotifyPlayer");
-  player.src = "";
-}
-
-function showToast(text, trackId){
-  const toast=document.getElementById("toast");
   clearTimeout(toastTimeout);
 
-  toast.innerText=text;
-  toast.style.display="block";
+  toast.innerText = text;
+  toast.style.display = "block";
 
-  if(trackId) playSpotify(trackId);
+  if(audioUnlocked && audioUrl){
+    player.src = audioUrl;
+    player.currentTime = 0;
+    player.play();
+  }
 
-  toastTimeout=setTimeout(()=>{
-    toast.style.display="none";
-    stopSpotify();
+  toastTimeout = setTimeout(()=>{
+    toast.style.display = "none";
+    player.pause();
+    player.currentTime = 0;
   },3000);
 }
 
@@ -213,7 +213,7 @@ function fetchData(){
       let gain=c.votes-oldVotes;
 
       if(gain>0){
-        showToast(`${name} +${gain} balsų!`, spotifyTracks[name]);
+        showToast(`${name} +${gain} balsų!`, songPreviews[name]);
       }
 
       if(gain>fastestGrower.gain){
