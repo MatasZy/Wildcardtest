@@ -234,39 +234,39 @@ let totalGain=0;
 let fastestGrower={name:"–",gain:0};
 
 sorted.forEach((c,index)=>{
-let name=c.name;
-let song=c.song || "";
-let oldVotes=previousVotes[name]??c.votes;
-let gain=c.votes-oldVotes;
+  let name=(c.name || "").replace(/\/+/g,'').trim();
+  let song=(c.song || "").replace(/\/+/g,'').trim();
+  let oldVotes=previousVotes[name]??c.votes;
+  let gain=c.votes-oldVotes;
 
-if(gain>fastestGrower.gain){
-  fastestGrower={name:name,gain:gain};
-}
+  if(gain>fastestGrower.gain){
+    fastestGrower={name:name,gain:gain};
+  }
 
-totalGain+=gain;
-totalVotes+=c.votes;
+  totalGain+=gain;
+  totalVotes+=c.votes;
 
-let diff=index===0?0:topVotes-c.votes;
+  let diff=index===0?0:topVotes-c.votes;
 
-table.innerHTML+=`
-<tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
-<td class="nameCell">
-<img src="${c.image||'https://via.placeholder.com/45'}">
-<strong>${index+1}. ${name}</strong><br>
-<small>${song}</small>
-</td>
-<td>${c.votes.toLocaleString()}</td>
-<td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
-<td>
-<div class="progressBar">
-<div class="progressFill" style="width:${c.percentage}%"></div>
-</div>
-${c.percentage}%
-</td>
-<td>${diff.toLocaleString()}</td>
-</tr>`;
+  table.innerHTML+=`
+  <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
+  <td class="nameCell">
+  <img src="${c.image||'https://via.placeholder.com/45'}">
+  <strong>${index+1}. ${name}</strong><br>
+  <small>${song}</small>
+  </td>
+  <td>${c.votes.toLocaleString()}</td>
+  <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
+  <td>
+  <div class="progressBar">
+  <div class="progressFill" style="width:${c.percentage}%"></div>
+  </div>
+  ${c.percentage}%
+  </td>
+  <td>${diff.toLocaleString()}</td>
+  </tr>`;
 
-previousVotes[name]=c.votes;
+  previousVotes[name]=c.votes;
 });
 
 let votesPerMinute=Math.round((totalGain/refreshInterval)*60);
@@ -295,8 +295,17 @@ timeLeft=refreshInterval;
 }
 
 function updateChart(all){
+const dynamicHeight = all.length * 60; // aukštis pagal dalyvių skaičių
+document.getElementById("chart").style.height = dynamicHeight + "px";
+
 const ctx=document.getElementById('chart').getContext('2d');
-let labels=all.map(c=>c.name + " – " + (c.song || ""));
+
+let labels=all.map(c=>{
+  let name=(c.name || "").replace(/\/+/g,'').trim();
+  let song=(c.song || "").replace(/\/+/g,'').trim();
+  return [name, song]; // multi-line label
+});
+
 let votes=all.map(c=>c.votes);
 
 if(chart) chart.destroy();
@@ -308,16 +317,19 @@ labels:labels,
 datasets:[{
 label:'Balsai',
 data:votes,
-backgroundColor:'rgba(0,200,83,0.7)'
+backgroundColor:'rgba(0,200,83,0.75)',
+borderRadius:6,
+barThickness:22
 }]
 },
 options:{
 indexAxis:'y',
-plugins:{legend:{display:false}},
 responsive:true,
+maintainAspectRatio:false,
+plugins:{legend:{display:false}},
 scales:{
-x:{ticks:{color:"white"}},
-y:{ticks:{color:"white"}}
+x:{ticks:{color:"white"}, grid:{color:"rgba(255,255,255,0.1)"}},
+y:{ticks:{color:"white", font:{size:12}}, grid:{display:false}}
 }
 }
 });
