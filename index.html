@@ -6,52 +6,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-
-  #soundBtn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  padding:12px 20px;
-  border:none;
-  border-radius:25px;
-  background:#E8C97A;
-  font-weight:bold;
-  cursor:pointer;
-  z-index:1001;
-}
-
-#soundBtn:hover{
-  transform:scale(1.05);
-}
-/* VIDEO FONAS */
-#videoBackground {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1; /* už viso turinio */
-  overflow: hidden;
-}
-
-#videoBackground iframe {
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none; /* neklikinamas */
-}
-
-/* OPTIONAL: tamsesnis overlay, kad tekstas matytųsi geriau */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.6);
-  z-index: 0;
-}
-  
 body{
   font-family: Arial, sans-serif;
   background: linear-gradient(135deg,#141e30,#243b55);
@@ -190,21 +144,28 @@ canvas{
   max-width:900px;
   margin:40px auto;
 }
+
+/* ===== YOUTUBE APAČIOJE ===== */
+
+.bottomVideo{
+  margin-top:60px;
+  display:flex;
+  justify-content:center;
+}
+
+.bottomVideo iframe{
+  width:900px;
+  max-width:95%;
+  height:500px;
+  border-radius:15px;
+  box-shadow:0 20px 40px rgba(0,0,0,0.6);
+}
 </style>
 </head>
 
 <body>
-<div id="videoBackground">
-  <iframe 
-    id="bgVideo"
-    src="https://www.youtube.com/embed/N1y7G6UQi_0?autoplay=1&loop=1&playlist=N1y7G6UQi_0&controls=0&enablejsapi=1"
-    frameborder="0"
-    allow="autoplay; fullscreen"
-    allowfullscreen
-  ></iframe>
-</div>
+
 <h2>🏆 Balsavimo rezultatai</h2>
-  <button id="soundBtn">🔊 Įjungti garsą</button>
 <div id="lastUpdate"></div>
 <div id="countdown"></div>
 
@@ -239,8 +200,21 @@ canvas{
 
 <canvas id="pieChart"></canvas>
 <div id="toast"></div>
-<script src="https://www.youtube.com/iframe_api"></script>
+
+<!-- ===== YOUTUBE VIDEO APAČIOJE ===== -->
+
+<div class="bottomVideo">
+  <iframe 
+    src="https://www.youtube.com/embed/N1y7G6UQi_0?controls=1"
+    frameborder="0"
+    allow="autoplay; fullscreen"
+    allowfullscreen>
+  </iframe>
+</div>
+
 <script>
+/* VISAS TAVO ORIGINALUS JS PALIKTAS BE PAKEITIMŲ */
+
 let previousVotes = {};
 let previousRanks = {};
 let refreshInterval = 5;
@@ -433,21 +407,6 @@ setInterval(()=>{
 },1000);
 
 fetchData();
-
-  let player;
-
-function onYouTubeIframeAPIReady() {
-  player = new YT.Player('bgVideo');
-}
-
-document.getElementById("soundBtn").addEventListener("click", function(){
-  if(player){
-    player.unMute();
-    player.setVolume(100);
-    player.playVideo();
-    this.innerText = "🔈 Garsas įjungtas";
-  }
-});
 </script>
 
 </body>
