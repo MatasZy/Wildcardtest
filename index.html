@@ -144,13 +144,6 @@ canvas{
   max-width:900px;
   margin:40px auto;
 }
-
-@media(max-width:600px){
-  th:nth-child(3),td:nth-child(3),
-  th:nth-child(5),td:nth-child(5){
-    display:none;
-  }
-}
 </style>
 </head>
 
@@ -195,10 +188,68 @@ canvas{
 <script>
 let previousVotes = {};
 let previousRanks = {};
-let previousTop = null;
 let refreshInterval = 5;
 let timeLeft = refreshInterval;
 let pieChart;
+
+/* ================= AI KOMENTARAI ================= */
+
+function generateComment(name, gain, rank, previousRank){
+  if(gain <= 0) return null;
+
+  const singleVote = [
+    `+1 balsas ${name}! Kažkas spaudė su meile 💚`,
+    `${name} tyliai pasiėmė dar vieną balsą 👀`,
+    `Vienas balsas ${name}. Bet nuo vieno viskas prasideda.`,
+    `${name} +1. Mažas žingsnis, didelės ambicijos 😎`
+  ];
+
+  const smallGain = [
+    `${name} renka pagreitį! (+${gain})`,
+    `${gain} nauji balsai ${name}!`,
+    `${name} tyliai kyla aukštyn 📈`,
+    `Publika bunda – ${name} +${gain}!`
+  ];
+
+  const bigGain = [
+    `🚀 ${name} šauna į viršų! (+${gain})`,
+    `${name} sprogimas! +${gain} balsų!`,
+    `Kas vyksta?! ${name} +${gain}! 🔥`,
+    `${name} įjungė turbo režimą (+${gain})`
+  ];
+
+  const leaderBoost = [
+    `👑 Lyderis ${name} stiprina poziciją!`,
+    `${name} sako: „Aš čia valdau.“`,
+    `Lyderio pareiškimas iš ${name}!`,
+    `${name} dar labiau atsiplėšia 👑`
+  ];
+
+  const overtake = [
+    `🚨 ${name} aplenkė konkurentą!`,
+    `${name} keičia žaidimo taisykles!`,
+    `Pozicijų rokiruotė! ${name} kyla!`,
+    `${name} sako: „Pasitrauk iš kelio!“`
+  ];
+
+  if(previousRank !== undefined && rank < previousRank){
+    return overtake[Math.floor(Math.random()*overtake.length)];
+  }
+
+  if(rank === 0){
+    return leaderBoost[Math.floor(Math.random()*leaderBoost.length)];
+  }
+
+  if(gain === 1){
+    return singleVote[Math.floor(Math.random()*singleVote.length)];
+  }
+
+  if(gain >= 5){
+    return bigGain[Math.floor(Math.random()*bigGain.length)];
+  }
+
+  return smallGain[Math.floor(Math.random()*smallGain.length)];
+}
 
 function showToast(text){
   const toast=document.getElementById("toast");
@@ -207,10 +258,13 @@ function showToast(text){
   setTimeout(()=>toast.style.display="none",3000);
 }
 
+/* ================= FETCH ================= */
+
 function fetchData(){
   fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
   .then(res=>res.json())
   .then(data=>{
+
     const table=document.getElementById("tbl");
     table.innerHTML=`
       <tr>
@@ -231,6 +285,10 @@ function fetchData(){
       let name=c.name.replace(/\/+/g,'');
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
+
+      let previousRank=previousRanks[name];
+      let comment=generateComment(name,gain,index,previousRank);
+      if(comment) showToast(comment);
 
       if(gain>fastestGrower.gain){
         fastestGrower={name:name,gain:gain};
