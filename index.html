@@ -6,7 +6,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-/* VISAS tavo originalus CSS paliktas nepakeistas */
 body{
   font-family: Arial, sans-serif;
   background: linear-gradient(135deg,#141e30,#243b55);
@@ -82,7 +81,6 @@ th{
 td{
   padding:12px;
   border-bottom:1px solid rgba(255,255,255,0.1);
-  vertical-align:top;
 }
 
 tr:hover{background:rgba(255,255,255,0.1);}
@@ -194,7 +192,73 @@ let refreshInterval = 5;
 let timeLeft = refreshInterval;
 let pieChart;
 
-/* VISAS tavo originalus JS paliktas nepakeistas */
+/* ================= AI KOMENTARAI ================= */
+
+function generateComment(name, gain, rank, previousRank){
+  if(gain <= 0) return null;
+
+  const singleVote = [
+    `+1 balsas ${name}! Kažkas spaudė su meile 💚`,
+    `${name} tyliai pasiėmė dar vieną balsą 👀`,
+    `Vienas balsas ${name}. Bet nuo vieno viskas prasideda.`,
+    `${name} +1. Mažas žingsnis, didelės ambicijos 😎`
+  ];
+
+  const smallGain = [
+    `${name} renka pagreitį! (+${gain})`,
+    `${gain} nauji balsai ${name}!`,
+    `${name} tyliai kyla aukštyn 📈`,
+    `Publika bunda – ${name} +${gain}!`
+  ];
+
+  const bigGain = [
+    `🚀 ${name} šauna į viršų! (+${gain})`,
+    `${name} sprogimas! +${gain} balsų!`,
+    `Kas vyksta?! ${name} +${gain}! 🔥`,
+    `${name} įjungė turbo režimą (+${gain})`
+  ];
+
+  const leaderBoost = [
+    `👑 Lyderis ${name} stiprina poziciją!`,
+    `${name} sako: „Aš čia valdau.“`,
+    `Lyderio pareiškimas iš ${name}!`,
+    `${name} dar labiau atsiplėšia 👑`
+  ];
+
+  const overtake = [
+    `🚨 ${name} aplenkė konkurentą!`,
+    `${name} keičia žaidimo taisykles!`,
+    `Pozicijų rokiruotė! ${name} kyla!`,
+    `${name} sako: „Pasitrauk iš kelio!“`
+  ];
+
+  if(previousRank !== undefined && rank < previousRank){
+    return overtake[Math.floor(Math.random()*overtake.length)];
+  }
+
+  if(rank === 0){
+    return leaderBoost[Math.floor(Math.random()*leaderBoost.length)];
+  }
+
+  if(gain === 1){
+    return singleVote[Math.floor(Math.random()*singleVote.length)];
+  }
+
+  if(gain >= 5){
+    return bigGain[Math.floor(Math.random()*bigGain.length)];
+  }
+
+  return smallGain[Math.floor(Math.random()*smallGain.length)];
+}
+
+function showToast(text){
+  const toast=document.getElementById("toast");
+  toast.innerText=text;
+  toast.style.display="block";
+  setTimeout(()=>toast.style.display="none",3000);
+}
+
+/* ================= FETCH ================= */
 
 function fetchData(){
   fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
@@ -222,6 +286,10 @@ function fetchData(){
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
 
+      let previousRank=previousRanks[name];
+      let comment=generateComment(name,gain,index,previousRank);
+      if(comment) showToast(comment);
+
       if(gain>fastestGrower.gain){
         fastestGrower={name:name,gain:gain};
       }
@@ -237,22 +305,7 @@ function fetchData(){
             <img src="${c.image||'https://via.placeholder.com/45'}">
             <strong>${index+1}. ${name}</strong><br>
             <small>${c.song||''}</small>
-
-            ${name === "Grete" ? `
-              <div style="margin-top:10px">
-                <iframe 
-                  style="border-radius:12px" 
-                  src="https://open.spotify.com/embed/track/3xwGHeuqhNf6DWJEqdXgcG?utm_source=generator" 
-                  width="100%" 
-                  height="80"
-                  frameBorder="0" 
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                  loading="lazy">
-                </iframe>
-              </div>
-            ` : ``}
           </td>
-
           <td>${c.votes.toLocaleString()}</td>
           <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
           <td>
@@ -288,7 +341,43 @@ function fetchData(){
   });
 }
 
-/* Likęs kodas paliktas 100% originalus */
+function updatePieChart(top5){
+  const ctx=document.getElementById('pieChart').getContext('2d');
+  let labels=top5.map(c=>c.name.replace(/\/+/g,''));
+  let votes=top5.map(c=>c.votes);
+
+  if(pieChart) pieChart.destroy();
+
+  pieChart=new Chart(ctx,{
+    type:'pie',
+    data:{
+      labels:labels,
+      datasets:[{
+        data:votes,
+        backgroundColor:[
+          '#F6DFA6',
+          '#D9D9D9',
+          '#D7B49E',
+          '#A5D6A7',
+          '#B2DFDB'
+        ]
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{position:'bottom'}}
+    }
+  });
+}
+
+setInterval(()=>{
+  timeLeft--;
+  if(timeLeft<=0) fetchData();
+  document.getElementById("countdown").innerHTML=
+    "Atnaujinama po: "+timeLeft+" s";
+},1000);
+
+fetchData();
 </script>
 
 </body>
