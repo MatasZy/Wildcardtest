@@ -102,13 +102,6 @@ img{
   background:linear-gradient(90deg,#81c784,#4caf50);
 }
 
-.firstPlace{background:linear-gradient(90deg,rgba(255,215,0,0.25),transparent);}
-.secondPlace{background:rgba(192,192,192,0.15);}
-.thirdPlace{background:rgba(205,127,50,0.15);}
-
-.gainUp{color:#4cff4c;font-weight:bold;}
-.gainDown{color:#ff4c4c;font-weight:bold;}
-
 canvas{
   max-width:1000px;
   margin:40px auto;
@@ -153,19 +146,18 @@ canvas{
 
 <canvas id="pieChart"></canvas>
 <canvas id="liveChart"></canvas>
+<canvas id="scatterChart"></canvas>
 
 <script>
 Chart.register(ChartDataLabels);
 
 let previousVotes = {};
-let minuteAccumulator = {};
-let lastMinuteMark = Date.now();
-let minuteHistory = [];
-let maxPoints = 15;
+let lastSnapshotVotes = {};
+let scatterHistory = [];
+let scatterChart;
 
 let refreshInterval = 5;
 let timeLeft = refreshInterval;
-
 let pieChart;
 let liveChart;
 
@@ -187,18 +179,11 @@ function fetchData(){
     let sorted=data.choices.sort((a,b)=>b.votes-a.votes);
     let totalVotes=0;
     let totalGain=0;
-    let fastestGrower={name:"–",gain:0};
 
     sorted.forEach((c,index)=>{
       let name=c.name.replace(/\/+/g,'');
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
-
-      minuteAccumulator[name]=(minuteAccumulator[name]||0)+gain;
-
-      if(gain>fastestGrower.gain){
-        fastestGrower={name:name,gain:gain};
-      }
 
       totalGain+=gain;
       totalVotes+=c.votes;
@@ -206,19 +191,14 @@ function fetchData(){
       let diff=index===0?0:sorted[0].votes-c.votes;
 
       table.innerHTML+=`
-        <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
+        <tr>
           <td class="nameCell">
             <img src="${c.image||'https://via.placeholder.com/45'}">
             <strong>${index+1}. ${name}</strong>
           </td>
           <td>${c.votes.toLocaleString()}</td>
-          <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
-          <td>
-            <div class="progressBar">
-              <div class="progressFill" style="width:${c.percentage}%"></div>
-            </div>
-            ${c.percentage}%
-          </td>
+          <td>${gain>=0?'+':''}${gain}</td>
+          <td>${c.percentage}%</td>
           <td>${diff.toLocaleString()}</td>
         </tr>`;
 
@@ -229,34 +209,11 @@ function fetchData(){
     document.getElementById("votesPerMinute").innerHTML=totalGain.toLocaleString();
     document.getElementById("leaderGap").innerHTML=
       sorted[1]?(sorted[0].votes-sorted[1].votes).toLocaleString():0;
-    document.getElementById("fastestGrower").innerHTML=
-      fastestGrower.gain>0?fastestGrower.name+" (+"+fastestGrower.gain+")":"–";
     document.getElementById("leaderPercent").innerHTML=
       totalVotes?Math.round(sorted[0].votes/totalVotes*100)+"%":"0%";
 
     updatePieChart(sorted.slice(0,5));
-
-    // === Kas minutę įrašom tašką ===
-    if(Date.now()-lastMinuteMark>=60000){
-      let minuteData={time:new Date().toLocaleTimeString()};
-      let total=0;
-
-      sorted.forEach(c=>{
-        let name=c.name.replace(/\/+/g,'');
-        minuteData[name]=minuteAccumulator[name]||0;
-        total+=minuteAccumulator[name]||0;
-      });
-
-      minuteData.total=total;
-      minuteHistory.push(minuteData);
-
-      if(minuteHistory.length>maxPoints) minuteHistory.shift();
-
-      minuteAccumulator={};
-      lastMinuteMark=Date.now();
-
-      updateLiveChart(sorted);
-    }
+    updateScatterChart(sorted);
 
     document.getElementById("lastUpdate").innerHTML=
       "Atnaujinta: "+new Date().toLocaleTimeString();
@@ -275,59 +232,68 @@ function updatePieChart(top5){
       labels:top5.map(c=>c.name.replace(/\/+/g,'')),
       datasets:[{
         data:top5.map(c=>c.votes),
-        backgroundColor:[
-          '#F6C85F',
-          '#6FA8DC',
-          '#93C47D',
-          '#E06666',
-          '#B4A7D6'
-        ],
-        borderWidth:1,
-        borderColor:'rgba(255,255,255,0.2)'
+        backgroundColor:['#F6C85F','#6FA8DC','#93C47D','#E06666','#B4A7D6']
       }]
     },
-    options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+    options:{
+      plugins:{
+        legend:{position:'bottom'},
+        datalabels:{display:false}   // <<< NUIMTI SKAIČIAI
+      }
+    }
   });
 }
 
-function updateLiveChart(sorted){
-  const ctx=document.getElementById('liveChart').getContext('2d');
-  if(liveChart) liveChart.destroy();
+function updateScatterChart(sorted){
+  const ctx=document.getElementById('scatterChart').getContext('2d');
 
-  let labels=minuteHistory.map(m=>m.time);
+  let timeLabel=new Date().toLocaleTimeString();
+
+  sorted.forEach(c=>{
+    let name=c.name.replace(/\/+/g,'');
+    let last=lastSnapshotVotes[name]??c.votes;
+    let gain=c.votes-last;
+
+    scatterHistory.push({
+      name:name,
+      time:timeLabel,
+      gain:gain
+    });
+
+    lastSnapshotVotes[name]=c.votes;
+  });
+
+  if(scatterChart) scatterChart.destroy();
+
   let datasets=[];
 
-  sorted.slice(0,5).forEach(c=>{
-    let name=c.name.replace(/\/+/g,'');
+  let participants=[...new Set(scatterHistory.map(s=>s.name))];
+
+  participants.forEach(name=>{
     datasets.push({
       label:name,
-      data:minuteHistory.map(m=>m[name]||0),
-      borderWidth:2,
-      tension:0.3
+      data:scatterHistory
+        .filter(s=>s.name===name)
+        .map((s,i)=>({x:i,y:s.gain})),
+      showLine:false,
+      pointRadius:6
     });
   });
 
-  datasets.push({
-    label:"Iš viso per minutę",
-    data:minuteHistory.map(m=>m.total||0),
-    borderDash:[6,6],
-    borderWidth:3,
-    tension:0.3
-  });
-
-  liveChart=new Chart(ctx,{
-    type:'line',
-    data:{labels:labels,datasets:datasets},
+  scatterChart=new Chart(ctx,{
+    type:'scatter',
+    data:{datasets:datasets},
     options:{
-      responsive:true,
-      animation:false,
-      scales:{y:{beginAtZero:true}},
+      scales:{
+        x:{title:{display:true,text:"Atnaujinimai (kas 5s)"}},
+        y:{beginAtZero:true,title:{display:true,text:"Balsų prieaugis"}}
+      },
       plugins:{
         legend:{position:'bottom'},
         datalabels:{
-          color:'#ffffff',
           align:'top',
-          formatter:(value)=>value>0?value:''
+          color:'#ffffff',
+          formatter:(value)=>value.y>0?value.y:''
         }
       }
     }
