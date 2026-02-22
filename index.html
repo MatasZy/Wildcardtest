@@ -6,52 +6,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-
-  #soundBtn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  padding:12px 20px;
-  border:none;
-  border-radius:25px;
-  background:#E8C97A;
-  font-weight:bold;
-  cursor:pointer;
-  z-index:1001;
-}
-
-#soundBtn:hover{
-  transform:scale(1.05);
-}
-/* VIDEO FONAS */
-#videoBackground {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1; /* už viso turinio */
-  overflow: hidden;
-}
-
-#videoBackground iframe {
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none; /* neklikinamas */
-}
-
-/* OPTIONAL: tamsesnis overlay, kad tekstas matytųsi geriau */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.6);
-  z-index: 0;
-}
-  
 body{
   font-family: Arial, sans-serif;
   background: linear-gradient(135deg,#141e30,#243b55);
@@ -61,51 +15,32 @@ body{
   padding:20px;
 }
 
-h2{margin-bottom:5px;}
-
-#lastUpdate,#countdown{
-  font-size:14px;
-  opacity:0.8;
+/* VIDEO FONAS */
+#videoBackground {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
 }
 
-.stats{
-  display:grid;
-  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
-  gap:20px;
-  max-width:1000px;
-  margin:30px auto;
+#videoBackground iframe {
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
 }
 
-.statCard{
-  background:rgba(255,255,255,0.08);
-  backdrop-filter:blur(12px);
-  padding:25px 15px;
-  border-radius:15px;
-  transition:0.3s;
-  border:1px solid rgba(255,255,255,0.1);
-}
-
-.statCard:hover{
-  transform:translateY(-5px);
-  background:rgba(255,255,255,0.12);
-}
-
-.statCard.big{
-  background:linear-gradient(135deg,#00c853,#4caf50);
-  color:white;
-  font-weight:bold;
-}
-
-.statNumber{
-  font-size:28px;
-  font-weight:bold;
-  margin-bottom:8px;
-}
-
-.statLabel{
-  font-size:13px;
-  opacity:0.8;
-  letter-spacing:0.5px;
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  z-index: 0;
 }
 
 table{
@@ -119,17 +54,12 @@ table{
   overflow:hidden;
 }
 
-th{
-  background:rgba(255,255,255,0.15);
-  padding:12px;
-}
-
-td{
+th,td{
   padding:12px;
   border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
-tr:hover{background:rgba(255,255,255,0.1);}
+tr:hover{background:rgba(255,255,255,0.1); cursor:pointer;}
 
 img{
   width:45px;
@@ -140,37 +70,23 @@ img{
   object-fit:cover;
 }
 
-.nameCell{text-align:left;}
-
-.progressBar{
-  width:100%;
-  height:8px;
-  background:rgba(255,255,255,0.2);
-  border-radius:5px;
-  overflow:hidden;
-  margin-bottom:4px;
+canvas{
+  max-width:900px;
+  margin:40px auto;
 }
 
-.progressFill{
-  height:100%;
-  background:linear-gradient(90deg,#81C784,#4CAF50);
-  transition:width 0.5s ease;
+#soundBtn{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  padding:12px 20px;
+  border:none;
+  border-radius:25px;
+  background:#E8C97A;
+  font-weight:bold;
+  cursor:pointer;
+  z-index:1001;
 }
-
-.firstPlace{
-  background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);
-}
-
-.secondPlace{
-  background:rgba(192,192,192,0.1);
-}
-
-.thirdPlace{
-  background:rgba(205,127,50,0.1);
-}
-
-.gainUp{color:#81C784;font-weight:bold;}
-.gainDown{color:#EF9A9A;font-weight:bold;}
 
 #toast{
   position:fixed;
@@ -185,126 +101,61 @@ img{
   font-weight:bold;
   z-index:1000;
 }
-
-canvas{
-  max-width:900px;
-  margin:40px auto;
-}
 </style>
 </head>
 
 <body>
+
 <div id="videoBackground">
- <iframe 
-  id="bgVideo"
-  src="https://www.youtube.com/embed/N1y7G6UQi_0?enablejsapi=1&controls=0&loop=1&playlist=N1y7G6UQi_0"
+  <iframe 
+    id="bgVideo"
+    src="https://www.youtube.com/embed/N1y7G6UQi_0?enablejsapi=1&controls=0&loop=1&playlist=N1y7G6UQi_0"
+    frameborder="0"
+    allow="autoplay; fullscreen"
+    allowfullscreen>
+  </iframe>
 </div>
+
 <h2>🏆 Balsavimo rezultatai</h2>
-  <button id="soundBtn">🔊 Įjungti garsą</button>
-<div id="lastUpdate"></div>
-<div id="countdown"></div>
-
-<div class="stats">
-  <div class="statCard big">
-    <div class="statNumber" id="totalVotes">0</div>
-    <div class="statLabel">Iš viso balsų</div>
-  </div>
-
-  <div class="statCard">
-    <div class="statNumber" id="votesPerMinute">0</div>
-    <div class="statLabel">⚡ Balsų per minutę</div>
-  </div>
-
-  <div class="statCard">
-    <div class="statNumber" id="leaderGap">0</div>
-    <div class="statLabel">🥇 Atotrūkis</div>
-  </div>
-
-  <div class="statCard">
-    <div class="statNumber" id="fastestGrower">–</div>
-    <div class="statLabel">🚀 Greičiausiai auga</div>
-  </div>
-
-  <div class="statCard">
-    <div class="statNumber" id="leaderPercent">0%</div>
-    <div class="statLabel">🥇 Lyderio dalis</div>
-  </div>
-</div>
+<button id="soundBtn">🔊 Įjungti garsą</button>
 
 <table id="tbl"></table>
-
 <canvas id="pieChart"></canvas>
 <div id="toast"></div>
-<script src="https://www.youtube.com/iframe_api"></script>
-<script>
 
-  const VIDEOS = {
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+const VIDEOS = {
   holdMyOwn: "N1y7G6UQi_0",
   parade: "hgcP25DYLSw"
 };
-let previousVotes = {};
-let previousRanks = {};
-let refreshInterval = 5;
-let timeLeft = refreshInterval;
+
+let player;
 let pieChart;
 
-/* ================= AI KOMENTARAI ================= */
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('bgVideo');
+}
 
-function generateComment(name, gain, rank, previousRank){
-  if(gain <= 0) return null;
+function changeBackgroundVideo(videoId){
+  if(player){
+    player.loadVideoById(videoId);
+    player.setVolume(100);
+    player.playVideo();
+  }
+}
 
-  const singleVote = [
-    `+1 balsas ${name}! Kažkas spaudė su meile 💚`,
-    `${name} tyliai pasiėmė dar vieną balsą 👀`,
-    `Vienas balsas ${name}. Bet nuo vieno viskas prasideda.`,
-    `${name} +1. Mažas žingsnis, didelės ambicijos 😎`
-  ];
-
-  const smallGain = [
-    `${name} renka pagreitį! (+${gain})`,
-    `${gain} nauji balsai ${name}!`,
-    `${name} tyliai kyla aukštyn 📈`,
-    `Publika bunda – ${name} +${gain}!`
-  ];
-
-  const bigGain = [
-    `🚀 ${name} šauna į viršų! (+${gain})`,
-    `${name} sprogimas! +${gain} balsų!`,
-    `Kas vyksta?! ${name} +${gain}! 🔥`,
-    `${name} įjungė turbo režimą (+${gain})`
-  ];
-
-  const leaderBoost = [
-    `👑 Lyderis ${name} stiprina poziciją!`,
-    `${name} sako: „Aš čia valdau.“`,
-    `Lyderio pareiškimas iš ${name}!`,
-    `${name} dar labiau atsiplėšia 👑`
-  ];
-
-  const overtake = [
-    `🚨 ${name} aplenkė konkurentą!`,
-    `${name} keičia žaidimo taisykles!`,
-    `Pozicijų rokiruotė! ${name} kyla!`,
-    `${name} sako: „Pasitrauk iš kelio!“`
-  ];
-
-  if(previousRank !== undefined && rank < previousRank){
-    return overtake[Math.floor(Math.random()*overtake.length)];
+function handleRowClick(name){
+  if(name.includes("Hold My Own")){
+    changeBackgroundVideo(VIDEOS.holdMyOwn);
+    showToast("🎵 Groja: Hold My Own");
   }
 
-  if(rank === 0){
-    return leaderBoost[Math.floor(Math.random()*leaderBoost.length)];
+  if(name.includes("Parade")){
+    changeBackgroundVideo(VIDEOS.parade);
+    showToast("🎵 Groja: Parade");
   }
-
-  if(gain === 1){
-    return singleVote[Math.floor(Math.random()*singleVote.length)];
-  }
-
-  if(gain >= 5){
-    return bigGain[Math.floor(Math.random()*bigGain.length)];
-  }
-
-  return smallGain[Math.floor(Math.random()*smallGain.length)];
 }
 
 function showToast(text){
@@ -313,8 +164,6 @@ function showToast(text){
   toast.style.display="block";
   setTimeout(()=>toast.style.display="none",3000);
 }
-
-/* ================= FETCH ================= */
 
 function fetchData(){
   fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
@@ -326,85 +175,33 @@ function fetchData(){
       <tr>
         <th>Dalyvis</th>
         <th>Balsai</th>
-        <th>Pokytis</th>
         <th>%</th>
-        <th>Skirtumas</th>
       </tr>`;
 
     let sorted=data.choices.sort((a,b)=>b.votes-a.votes);
-    let topVotes=sorted[0]?.votes||0;
-    let totalVotes=0;
-    let totalGain=0;
-    let fastestGrower={name:"–",gain:0};
 
     sorted.forEach((c,index)=>{
-      let name=c.name.replace(/\/+/g,'');
-      let oldVotes=previousVotes[name]??c.votes;
-      let gain=c.votes-oldVotes;
-
-      let previousRank=previousRanks[name];
-      let comment=generateComment(name,gain,index,previousRank);
-      if(comment) showToast(comment);
-
-      if(gain>fastestGrower.gain){
-        fastestGrower={name:name,gain:gain};
-      }
-
-      totalGain+=gain;
-      totalVotes+=c.votes;
-
-      let diff=index===0?0:topVotes-c.votes;
+      let cleanName=c.name.replace(/\/+/g,'');
 
       table.innerHTML+=`
-       <tr 
-  class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}"
-  onclick="handleRowClick('${c.song || ''}')"
-  style="cursor:pointer"
->
-          <td class="nameCell">
-            <img src="${c.image||'https://via.placeholder.com/45'}">
-            <strong>${index+1}. ${name}</strong><br>
-            <small>${c.song||''}</small>
+        <tr onclick="handleRowClick('${cleanName}')">
+          <td>
+            <img src="${c.image}">
+            <strong>${index+1}. ${cleanName}</strong>
           </td>
           <td>${c.votes.toLocaleString()}</td>
-          <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
-          <td>
-            <div class="progressBar">
-              <div class="progressFill" style="width:${c.percentage}%"></div>
-            </div>
-            ${c.percentage}%
-          </td>
-          <td>${diff.toLocaleString()}</td>
+          <td>${c.percentage}%</td>
         </tr>`;
-
-      previousVotes[name]=c.votes;
-      previousRanks[name]=index;
     });
 
-    let votesPerMinute=Math.round((totalGain/refreshInterval)*60);
-
-    document.getElementById("totalVotes").innerHTML=totalVotes.toLocaleString();
-    document.getElementById("votesPerMinute").innerHTML=votesPerMinute.toLocaleString();
-    document.getElementById("leaderGap").innerHTML=
-      (sorted[1]? (sorted[0].votes-sorted[1].votes).toLocaleString():0);
-    document.getElementById("fastestGrower").innerHTML=
-      fastestGrower.gain>0 ? fastestGrower.name+" (+"+fastestGrower.gain+")":"–";
-
-    let leaderPercent = totalVotes ? Math.round((sorted[0].votes/totalVotes)*100) : 0;
-    document.getElementById("leaderPercent").innerHTML = leaderPercent + "%";
-
-    updatePieChart(sorted.slice(0,5));
-
-    document.getElementById("lastUpdate").innerHTML=
-      "Atsinaujino: "+new Date().toLocaleTimeString();
-    timeLeft=refreshInterval;
+    updatePieChart(sorted);
   });
 }
 
-function updatePieChart(top5){
+function updatePieChart(data){
   const ctx=document.getElementById('pieChart').getContext('2d');
-  let labels=top5.map(c=>c.name.replace(/\/+/g,''));
-  let votes=top5.map(c=>c.votes);
+  let labels=data.map(c=>c.name.replace(/\/+/g,''));
+  let votes=data.map(c=>c.votes);
 
   if(pieChart) pieChart.destroy();
 
@@ -415,11 +212,7 @@ function updatePieChart(top5){
       datasets:[{
         data:votes,
         backgroundColor:[
-          '#F6DFA6',
-          '#D9D9D9',
-          '#D7B49E',
-          '#A5D6A7',
-          '#B2DFDB'
+          '#F6DFA6','#D9D9D9','#D7B49E','#A5D6A7','#B2DFDB'
         ]
       }]
     },
@@ -430,30 +223,6 @@ function updatePieChart(top5){
   });
 }
 
-setInterval(()=>{
-  timeLeft--;
-  if(timeLeft<=0) fetchData();
-  document.getElementById("countdown").innerHTML=
-    "Atnaujinama po: "+timeLeft+" s";
-},1000);
-
-fetchData();
-
-  let player;
-
-function onYouTubeIframeAPIReady() {
-  player = new YT.Player('bgVideo');
-}
-function changeBackgroundVideo(videoId){
-  if(player){
-    player.loadVideoById({
-      videoId: videoId,
-      startSeconds: 0
-    });
-    player.setVolume(100);
-    player.playVideo();
-  }
-}
 document.getElementById("soundBtn").addEventListener("click", function(){
   if(player){
     player.unMute();
@@ -463,17 +232,8 @@ document.getElementById("soundBtn").addEventListener("click", function(){
   }
 });
 
-  function handleRowClick(song){
-  if(song.includes("Hold My Own")){
-    changeBackgroundVideo(VIDEOS.holdMyOwn);
-    showToast("🎵 Groja: Hold My Own");
-  }
-
-  if(song.includes("Parade")){
-    changeBackgroundVideo(VIDEOS.parade);
-    showToast("🎵 Groja: Parade");
-  }
-}
+fetchData();
+setInterval(fetchData,5000);
 </script>
 
 </body>
