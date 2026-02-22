@@ -186,11 +186,6 @@ canvas{
   </div>
 
   <div class="statCard">
-    <div class="statNumber" id="avgGain">0</div>
-    <div class="statLabel">📈 Vidutinis prieaugis</div>
-  </div>
-
-  <div class="statCard">
     <div class="statNumber" id="leaderPercent">0%</div>
     <div class="statLabel">🥇 Lyderio dalis</div>
   </div>
@@ -237,9 +232,9 @@ function fetchData(){
     let totalVotes=0;
     let totalGain=0;
     let fastestGrower={name:"–",gain:0};
-    let gains=[];
 
     sorted.forEach((c,index)=>{
+      // Pašaliname // simbolius iš pavadinimų
       let name=c.name.replace(/\/+/g,'');
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
@@ -250,7 +245,6 @@ function fetchData(){
 
       totalGain+=gain;
       totalVotes+=c.votes;
-      gains.push(gain);
 
       let diff=index===0?0:topVotes-c.votes;
 
@@ -290,9 +284,6 @@ function fetchData(){
     document.getElementById("fastestGrower").innerHTML=
       fastestGrower.gain>0 ? fastestGrower.name+" (+"+fastestGrower.gain+")":"–";
 
-    let avgGain = gains.length ? Math.round(gains.reduce((a,b)=>a+b,0)/gains.length) : 0;
-    document.getElementById("avgGain").innerHTML = avgGain;
-
     let leaderPercent = totalVotes ? Math.round((sorted[0].votes/totalVotes)*100) : 0;
     document.getElementById("leaderPercent").innerHTML = leaderPercent + "%";
 
@@ -311,7 +302,7 @@ function fetchData(){
 
 function updatePieChart(top5){
   const ctx=document.getElementById('pieChart').getContext('2d');
-  let labels=top5.map(c=>c.name);
+  let labels=top5.map(c=>c.name.replace(/\/+/g,'')); // dar kartą užtikriname, kad // pašalinta
   let votes=top5.map(c=>c.votes);
 
   if(pieChart) pieChart.destroy();
