@@ -2,86 +2,128 @@
 <html lang="lt">
 <head>
 <meta charset="utf-8">
-<title>Balsavimo rezultatai</title>
+<title>🏆 Balsavimo rezultatai</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
+body{
   font-family: Arial, sans-serif;
-  background: linear-gradient(135deg, #141e30, #243b55);
-  color: white;
-  text-align: center;
-  margin: 0;
-  padding: 20px;
+  background: linear-gradient(135deg,#141e30,#243b55);
+  color:white;
+  text-align:center;
+  margin:0;
+  padding:20px;
 }
 
-h2 {
-  margin-bottom: 10px;
+h2{margin-bottom:5px;}
+
+#lastUpdate,#countdown{
+  font-size:14px;
+  opacity:0.8;
 }
 
-#lastUpdate {
-  margin-bottom: 5px;
-  font-size: 14px;
-  opacity: 0.8;
+.stats{
+  display:flex;
+  justify-content:center;
+  gap:15px;
+  flex-wrap:wrap;
+  margin:20px 0;
 }
 
-#countdown {
-  font-size: 14px;
-  color: #ffd700;
-  margin-bottom: 15px;
+.statCard{
+  background:rgba(255,255,255,0.08);
+  padding:15px;
+  border-radius:10px;
+  min-width:150px;
 }
 
-table {
-  width: 95%;
-  max-width: 900px;
-  margin: auto;
-  border-collapse: collapse;
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(10px);
-  border-radius: 10px;
-  overflow: hidden;
+table{
+  width:95%;
+  max-width:1000px;
+  margin:auto;
+  border-collapse:collapse;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(10px);
+  border-radius:10px;
+  overflow:hidden;
 }
 
-th {
-  background: rgba(255,255,255,0.15);
-  padding: 12px;
+th{
+  background:rgba(255,255,255,0.15);
+  padding:12px;
 }
 
-td {
-  padding: 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+td{
+  padding:12px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
-tr:hover {
-  background: rgba(255,255,255,0.1);
+tr:hover{background:rgba(255,255,255,0.1);}
+
+img{
+  width:45px;
+  height:45px;
+  border-radius:50%;
+  vertical-align:middle;
+  margin-right:10px;
+  object-fit:cover;
 }
 
-img {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  vertical-align: middle;
-  margin-right: 10px;
-  object-fit: cover;
+.nameCell{text-align:left;}
+
+.progressBar{
+  width:100%;
+  height:8px;
+  background:rgba(255,255,255,0.2);
+  border-radius:5px;
+  overflow:hidden;
+  margin-bottom:4px;
 }
 
-.nameCell {
-  text-align: left;
+.progressFill{
+  height:100%;
+  background:linear-gradient(90deg,#4cff4c,#00c853);
+  transition:width 0.5s ease;
 }
 
-.gain {
-  color: #4cff4c;
-  font-size: 13px;
-  font-weight: bold;
+.firstPlace{
+  background:linear-gradient(90deg,rgba(255,215,0,0.25),transparent);
 }
 
-.totalVotes {
-  margin-top: 20px;
-  font-size: 18px;
-  font-weight: bold;
+.secondPlace{
+  background:rgba(192,192,192,0.15);
 }
 
-.firstPlace {
-  background: rgba(255,215,0,0.15);
+.thirdPlace{
+  background:rgba(205,127,50,0.15);
+}
+
+.gainUp{color:#4cff4c;font-weight:bold;}
+.gainDown{color:#ff4c4c;font-weight:bold;}
+
+#toast{
+  position:fixed;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#ffd700;
+  color:black;
+  padding:10px 20px;
+  border-radius:20px;
+  display:none;
+  font-weight:bold;
+}
+
+canvas{
+  max-width:900px;
+  margin:30px auto;
+}
+
+@media(max-width:600px){
+  th:nth-child(3),td:nth-child(3),
+  th:nth-child(5),td:nth-child(5){
+    display:none;
+  }
 }
 </style>
 </head>
@@ -89,93 +131,139 @@ img {
 <body>
 
 <h2>🏆 Balsavimo rezultatai</h2>
-<div id="lastUpdate">Atnaujinama...</div>
-<div id="countdown">Atnaujinama po: 5 s</div>
+<div id="lastUpdate"></div>
+<div id="countdown"></div>
+
+<div class="stats">
+  <div class="statCard" id="totalVotes">Iš viso balsų: 0</div>
+  <div class="statCard" id="voteSpeed">⚡ Tempas: 0 / min</div>
+  <div class="statCard" id="leaderGap">🥇 Atotrūkis: 0</div>
+</div>
 
 <table id="tbl"></table>
 
-<div class="totalVotes" id="totalVotes"></div>
+<canvas id="chart"></canvas>
+
+<div id="toast"></div>
 
 <script>
 let previousVotes = {};
+let previousRanks = {};
+let previousTop = null;
 let refreshInterval = 5;
 let timeLeft = refreshInterval;
+let chart;
 
-function fetchData() {
-  fetch("https://www.lrt.lt/api/v1/daily-question/2417?t=" + new Date().getTime(), {
-    cache: "no-store"
-  })
-  .then(res => res.json())
-  .then(data => {
-
-    const table = document.getElementById("tbl");
-    const now = new Date();
-    document.getElementById("lastUpdate").innerHTML =
-      "Paskutinis atnaujinimas: " + now.toLocaleTimeString();
-
-    table.innerHTML = `
-      <tr>
-        <th>Dalyvis</th>
-        <th>Balsai</th>
-        <th>Prieaugis</th>
-        <th>%</th>
-        <th>Skirtumas</th>
-      </tr>
-    `;
-
-    let sorted = data.choices.sort((a, b) => b.votes - a.votes);
-    let topVotes = sorted.length > 0 ? sorted[0].votes : 0;
-    let totalVotes = 0;
-
-    sorted.forEach((c, index) => {
-
-      let cleanName = c.name.replace(/\/+/g, '');
-
-      let oldVotes = previousVotes[cleanName] ?? c.votes;
-      let gain = c.votes - oldVotes;
-
-      let diff = index === 0 ? 0 : topVotes - c.votes;
-
-      totalVotes += c.votes;
-
-      table.innerHTML += `
-        <tr class="${index === 0 ? 'firstPlace' : ''}">
-          <td class="nameCell">
-            <img src="${c.image || 'https://via.placeholder.com/45'}">
-            <strong>${cleanName}</strong><br>
-            <small>${c.song || ''}</small>
-          </td>
-          <td>${c.votes}</td>
-          <td class="gain">+${gain}</td>
-          <td>${c.percentage}%</td>
-          <td>${diff}</td>
-        </tr>
-      `;
-
-      previousVotes[cleanName] = c.votes;
-    });
-
-    document.getElementById("totalVotes").innerHTML =
-      "Iš viso balsų: " + totalVotes;
-
-    timeLeft = refreshInterval;
-  })
-  .catch(err => {
-    console.error("Klaida:", err);
-  });
+function showToast(text){
+  const toast=document.getElementById("toast");
+  toast.innerText=text;
+  toast.style.display="block";
+  setTimeout(()=>toast.style.display="none",3000);
 }
 
-// Sekundžių skaitiklis
-setInterval(() => {
-  timeLeft--;
-  if (timeLeft <= 0) {
-    fetchData();
-  }
-  document.getElementById("countdown").innerHTML =
-    "Atnaujinama po: " + timeLeft + " s";
-}, 1000);
+function fetchData(){
+fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
+.then(res=>res.json())
+.then(data=>{
 
-// Pirmas užkrovimas
+const table=document.getElementById("tbl");
+table.innerHTML=`
+<tr>
+<th>Dalyvis</th>
+<th>Balsai</th>
+<th>Pokytis</th>
+<th>%</th>
+<th>Skirtumas</th>
+</tr>`;
+
+let sorted=data.choices.sort((a,b)=>b.votes-a.votes);
+let topVotes=sorted[0]?.votes||0;
+let totalVotes=0;
+let totalGain=0;
+
+sorted.forEach((c,index)=>{
+let name=c.name.replace(/\/+/g,'');
+let oldVotes=previousVotes[name]??c.votes;
+let gain=c.votes-oldVotes;
+totalGain+=gain;
+totalVotes+=c.votes;
+
+let diff=index===0?0:topVotes-c.votes;
+
+let rankChange="";
+if(previousRanks[name]!=null){
+ if(previousRanks[name]>index) rankChange=" 🔼";
+ if(previousRanks[name]<index) rankChange=" 🔽";
+}
+
+table.innerHTML+=`
+<tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
+<td class="nameCell">
+<img src="${c.image||'https://via.placeholder.com/45'}">
+<strong>${index+1}. ${name}</strong>${rankChange}<br>
+<small>${c.song||''}</small>
+</td>
+<td>${c.votes}</td>
+<td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
+<td>
+<div class="progressBar">
+<div class="progressFill" style="width:${c.percentage}%"></div>
+</div>
+${c.percentage}%
+</td>
+<td>${diff}</td>
+</tr>`;
+
+previousVotes[name]=c.votes;
+previousRanks[name]=index;
+});
+
+document.getElementById("totalVotes").innerHTML="Iš viso balsų: "+totalVotes;
+document.getElementById("voteSpeed").innerHTML="⚡ Tempas: "+Math.round((totalGain/refreshInterval)*60)+" / min";
+document.getElementById("leaderGap").innerHTML="🥇 Atotrūkis: "+(sorted[1]?sorted[0].votes-sorted[1].votes:0);
+
+if(previousTop && previousTop!==sorted[0].name){
+ showToast("🔥 Naujas lyderis: "+sorted[0].name);
+}
+previousTop=sorted[0].name;
+
+updateChart(sorted.slice(0,5));
+
+document.getElementById("lastUpdate").innerHTML="Atnaujinta: "+new Date().toLocaleTimeString();
+timeLeft=refreshInterval;
+
+});
+}
+
+function updateChart(top5){
+const ctx=document.getElementById('chart').getContext('2d');
+let labels=top5.map(c=>c.name);
+let votes=top5.map(c=>c.votes);
+
+if(chart) chart.destroy();
+
+chart=new Chart(ctx,{
+type:'bar',
+data:{
+labels:labels,
+datasets:[{
+label:'Balsai',
+data:votes
+}]
+},
+options:{
+plugins:{legend:{display:false}},
+responsive:true
+}
+});
+}
+
+setInterval(()=>{
+timeLeft--;
+if(timeLeft<=0) fetchData();
+document.getElementById("countdown").innerHTML="Atnaujinama po: "+timeLeft+" s";
+},1000);
+
 fetchData();
 </script>
 
