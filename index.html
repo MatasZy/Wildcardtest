@@ -195,13 +195,9 @@ canvas{
 
 <body>
 <div id="videoBackground">
-  <iframe 
-    id="bgVideo"
-    src="https://www.youtube.com/embed/N1y7G6UQi_0?autoplay=1&loop=1&playlist=N1y7G6UQi_0&controls=0&enablejsapi=1"
-    frameborder="0"
-    allow="autoplay; fullscreen"
-    allowfullscreen
-  ></iframe>
+ <iframe 
+  id="bgVideo"
+  src="https://www.youtube.com/embed/N1y7G6UQi_0?enablejsapi=1&controls=0&loop=1&playlist=N1y7G6UQi_0"
 </div>
 <h2>🏆 Balsavimo rezultatai</h2>
   <button id="soundBtn">🔊 Įjungti garsą</button>
@@ -241,6 +237,11 @@ canvas{
 <div id="toast"></div>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
+
+  const VIDEOS = {
+  holdMyOwn: "N1y7G6UQi_0",
+  parade: "hgcP25DYLSw"
+};
 let previousVotes = {};
 let previousRanks = {};
 let refreshInterval = 5;
@@ -355,7 +356,11 @@ function fetchData(){
       let diff=index===0?0:topVotes-c.votes;
 
       table.innerHTML+=`
-        <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
+       <tr 
+  class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}"
+  onclick="handleRowClick('${c.song || ''}')"
+  style="cursor:pointer"
+>
           <td class="nameCell">
             <img src="${c.image||'https://via.placeholder.com/45'}">
             <strong>${index+1}. ${name}</strong><br>
@@ -439,7 +444,16 @@ fetchData();
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('bgVideo');
 }
-
+function changeBackgroundVideo(videoId){
+  if(player){
+    player.loadVideoById({
+      videoId: videoId,
+      startSeconds: 0
+    });
+    player.setVolume(100);
+    player.playVideo();
+  }
+}
 document.getElementById("soundBtn").addEventListener("click", function(){
   if(player){
     player.unMute();
@@ -448,6 +462,18 @@ document.getElementById("soundBtn").addEventListener("click", function(){
     this.innerText = "🔈 Garsas įjungtas";
   }
 });
+
+  function handleRowClick(song){
+  if(song.includes("Hold My Own")){
+    changeBackgroundVideo(VIDEOS.holdMyOwn);
+    showToast("🎵 Groja: Hold My Own");
+  }
+
+  if(song.includes("Parade")){
+    changeBackgroundVideo(VIDEOS.parade);
+    showToast("🎵 Groja: Parade");
+  }
+}
 </script>
 
 </body>
