@@ -312,7 +312,24 @@ function showToast(text){
   toast.style.display="block";
   setTimeout(()=>toast.style.display="none",3000);
 }
+/* ================= VIDEO MAPPING ================= */
 
+const performerVideos = {
+  "Nøra Blu „Hold My Own“": "N1y7G6UQi_0", // tas pats kaip dabar
+  "Grete „Parade“": "hgcP25DYLSw"
+};
+
+function changeBackgroundVideo(name){
+  if(!player) return;
+
+  const videoId = performerVideos[name];
+
+  if(videoId){
+    player.loadVideoById(videoId);
+    player.unMute();
+    player.setVolume(100);
+  }
+}
 /* ================= FETCH ================= */
 
 function fetchData(){
@@ -355,7 +372,10 @@ function fetchData(){
       let diff=index===0?0:topVotes-c.votes;
 
       table.innerHTML+=`
-        <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
+        <tr 
+  onclick="changeBackgroundVideo('${name.replace(/'/g,"\\'")}')"
+  style="cursor:pointer"
+  class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
           <td class="nameCell">
             <img src="${c.image||'https://via.placeholder.com/45'}">
             <strong>${index+1}. ${name}</strong><br>
