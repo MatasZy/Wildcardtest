@@ -111,17 +111,9 @@ img{
   transition:width 0.5s ease;
 }
 
-.firstPlace{
-  background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);
-}
-
-.secondPlace{
-  background:rgba(192,192,192,0.1);
-}
-
-.thirdPlace{
-  background:rgba(205,127,50,0.1);
-}
+.firstPlace{background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);}
+.secondPlace{background:rgba(192,192,192,0.1);}
+.thirdPlace{background:rgba(205,127,50,0.1);}
 
 .gainUp{color:#81C784;font-weight:bold;}
 .gainDown{color:#EF9A9A;font-weight:bold;}
@@ -183,6 +175,19 @@ canvas{
 <table id="tbl"></table>
 
 <canvas id="pieChart"></canvas>
+
+<!-- Spotify player -->
+<div id="playerContainer" style="max-width:900px;margin:20px auto;display:none;">
+  <iframe
+    id="spotifyPlayer"
+    style="border-radius:12px"
+    width="100%"
+    height="120"
+    frameborder="0"
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture">
+  </iframe>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -192,70 +197,23 @@ let refreshInterval = 5;
 let timeLeft = refreshInterval;
 let pieChart;
 
-/* ================= AI KOMENTARAI ================= */
+/* 🎵 Spotify valdymas */
+let isPlaying = false;
+const greteTrack = "https://open.spotify.com/embed/track/3xwGHeuqhNf6DWJEqdXgcG?autoplay=1";
 
-function generateComment(name, gain, rank, previousRank){
-  if(gain <= 0) return null;
+function toggleGreteSong(){
+  const iframe = document.getElementById("spotifyPlayer");
+  const container = document.getElementById("playerContainer");
 
-  const singleVote = [
-    `+1 balsas ${name}! Kažkas spaudė su meile 💚`,
-    `${name} tyliai pasiėmė dar vieną balsą 👀`,
-    `Vienas balsas ${name}. Bet nuo vieno viskas prasideda.`,
-    `${name} +1. Mažas žingsnis, didelės ambicijos 😎`
-  ];
-
-  const smallGain = [
-    `${name} renka pagreitį! (+${gain})`,
-    `${gain} nauji balsai ${name}!`,
-    `${name} tyliai kyla aukštyn 📈`,
-    `Publika bunda – ${name} +${gain}!`
-  ];
-
-  const bigGain = [
-    `🚀 ${name} šauna į viršų! (+${gain})`,
-    `${name} sprogimas! +${gain} balsų!`,
-    `Kas vyksta?! ${name} +${gain}! 🔥`,
-    `${name} įjungė turbo režimą (+${gain})`
-  ];
-
-  const leaderBoost = [
-    `👑 Lyderis ${name} stiprina poziciją!`,
-    `${name} sako: „Aš čia valdau.“`,
-    `Lyderio pareiškimas iš ${name}!`,
-    `${name} dar labiau atsiplėšia 👑`
-  ];
-
-  const overtake = [
-    `🚨 ${name} aplenkė konkurentą!`,
-    `${name} keičia žaidimo taisykles!`,
-    `Pozicijų rokiruotė! ${name} kyla!`,
-    `${name} sako: „Pasitrauk iš kelio!“`
-  ];
-
-  if(previousRank !== undefined && rank < previousRank){
-    return overtake[Math.floor(Math.random()*overtake.length)];
+  if(!isPlaying){
+    iframe.src = greteTrack;
+    container.style.display = "block";
+    isPlaying = true;
+  } else {
+    iframe.src = "";
+    container.style.display = "none";
+    isPlaying = false;
   }
-
-  if(rank === 0){
-    return leaderBoost[Math.floor(Math.random()*leaderBoost.length)];
-  }
-
-  if(gain === 1){
-    return singleVote[Math.floor(Math.random()*singleVote.length)];
-  }
-
-  if(gain >= 5){
-    return bigGain[Math.floor(Math.random()*bigGain.length)];
-  }
-
-  return smallGain[Math.floor(Math.random()*smallGain.length)];
-}
-
-function showToast(text){
-  const toast=document.getElementById("toast");
-  toast.innerText=text;
-  toast.style.display="block";
-  setTimeout(()=>toast.style.display="none",3000);
 }
 
 /* ================= FETCH ================= */
@@ -286,10 +244,6 @@ function fetchData(){
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
 
-      let previousRank=previousRanks[name];
-      let comment=generateComment(name,gain,index,previousRank);
-      if(comment) showToast(comment);
-
       if(gain>fastestGrower.gain){
         fastestGrower={name:name,gain:gain};
       }
@@ -299,12 +253,18 @@ function fetchData(){
 
       let diff=index===0?0:topVotes-c.votes;
 
+      let isGrete = name === "Grete" && c.song === "Parade";
+
       table.innerHTML+=`
         <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
           <td class="nameCell">
             <img src="${c.image||'https://via.placeholder.com/45'}">
-            <strong>${index+1}. ${name}</strong><br>
-            <small>${c.song||''}</small>
+            <strong ${isGrete?'style="cursor:pointer;color:#F6DFA6" onclick="toggleGreteSong()"':''}>
+              ${index+1}. ${name}
+            </strong><br>
+            <small ${isGrete?'style="cursor:pointer" onclick="toggleGreteSong()"':''}>
+              ${c.song||''}
+            </small>
           </td>
           <td>${c.votes.toLocaleString()}</td>
           <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
