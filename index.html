@@ -120,7 +120,7 @@ img{
 .gainDown{color:#ff4c4c;font-weight:bold;}
 
 canvas{
-  max-width:900px;
+  max-width:100%;
   margin:40px auto;
 }
 
@@ -135,12 +135,6 @@ canvas{
   margin-right:auto;
 }
 
-.analytics h3{
-  margin-bottom:25px;
-  font-size:20px;
-  letter-spacing:1px;
-}
-
 .analyticsGrid{
   display:grid;
   grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
@@ -151,12 +145,6 @@ canvas{
   background:rgba(255,255,255,0.07);
   padding:25px;
   border-radius:15px;
-  transition:0.3s;
-}
-
-.analyticsCard:hover{
-  background:rgba(255,255,255,0.12);
-  transform:scale(1.05);
 }
 
 .analyticsNumber{
@@ -168,13 +156,6 @@ canvas{
 .analyticsLabel{
   font-size:13px;
   opacity:0.8;
-}
-
-@media(max-width:600px){
-  th:nth-child(3),td:nth-child(3),
-  th:nth-child(5),td:nth-child(5){
-    display:none;
-  }
 }
 </style>
 </head>
@@ -212,7 +193,6 @@ canvas{
 <canvas id="chart"></canvas>
 
 <div class="analytics">
-  <h3>📊 Išplėstinė statistika</h3>
   <div class="analyticsGrid">
     <div class="analyticsCard">
       <div class="analyticsNumber" id="avgVotes">0</div>
@@ -222,16 +202,6 @@ canvas{
     <div class="analyticsCard">
       <div class="analyticsNumber" id="topPercent">0%</div>
       <div class="analyticsLabel">Lyderio balsų dalis</div>
-    </div>
-
-    <div class="analyticsCard">
-      <div class="analyticsNumber" id="top5Total">0</div>
-      <div class="analyticsLabel">TOP 5 balsų suma</div>
-    </div>
-
-    <div class="analyticsCard">
-      <div class="analyticsNumber" id="participantsCount">0</div>
-      <div class="analyticsLabel">Dalyvių skaičius</div>
     </div>
   </div>
 </div>
@@ -265,6 +235,7 @@ let fastestGrower={name:"–",gain:0};
 
 sorted.forEach((c,index)=>{
 let name=c.name;
+let song=c.song || "";
 let oldVotes=previousVotes[name]??c.votes;
 let gain=c.votes-oldVotes;
 
@@ -282,7 +253,7 @@ table.innerHTML+=`
 <td class="nameCell">
 <img src="${c.image||'https://via.placeholder.com/45'}">
 <strong>${index+1}. ${name}</strong><br>
-<small>${c.song||''}</small>
+<small>${song}</small>
 </td>
 <td>${c.votes.toLocaleString()}</td>
 <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
@@ -301,7 +272,6 @@ previousVotes[name]=c.votes;
 let votesPerMinute=Math.round((totalGain/refreshInterval)*60);
 let avgVotes=Math.round(totalVotes/sorted.length);
 let topPercent=((topVotes/totalVotes)*100).toFixed(1);
-let top5Total=sorted.slice(0,5).reduce((sum,c)=>sum+c.votes,0);
 
 document.getElementById("totalVotes").innerHTML=totalVotes.toLocaleString();
 document.getElementById("votesPerMinute").innerHTML=votesPerMinute.toLocaleString();
@@ -313,10 +283,8 @@ document.getElementById("fastestGrower").innerHTML=
 
 document.getElementById("avgVotes").innerHTML=avgVotes.toLocaleString();
 document.getElementById("topPercent").innerHTML=topPercent+"%";
-document.getElementById("top5Total").innerHTML=top5Total.toLocaleString();
-document.getElementById("participantsCount").innerHTML=sorted.length;
 
-updateChart(sorted.slice(0,5));
+updateChart(sorted);
 
 document.getElementById("lastUpdate").innerHTML=
 "Atsinaujino: "+new Date().toLocaleTimeString();
@@ -326,10 +294,10 @@ timeLeft=refreshInterval;
 });
 }
 
-function updateChart(top5){
+function updateChart(all){
 const ctx=document.getElementById('chart').getContext('2d');
-let labels=top5.map(c=>c.name);
-let votes=top5.map(c=>c.votes);
+let labels=all.map(c=>c.name + " – " + (c.song || ""));
+let votes=all.map(c=>c.votes);
 
 if(chart) chart.destroy();
 
@@ -344,8 +312,13 @@ backgroundColor:'rgba(0,200,83,0.7)'
 }]
 },
 options:{
+indexAxis:'y',
 plugins:{legend:{display:false}},
-responsive:true
+responsive:true,
+scales:{
+x:{ticks:{color:"white"}},
+y:{ticks:{color:"white"}}
+}
 }
 });
 }
