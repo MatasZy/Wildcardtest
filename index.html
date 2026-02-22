@@ -22,20 +22,49 @@ h2{margin-bottom:5px;}
   opacity:0.8;
 }
 
+/* ===== STATISTIKA ===== */
+
 .stats{
-  display:flex;
-  justify-content:center;
-  gap:15px;
-  flex-wrap:wrap;
-  margin:20px 0;
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+  gap:20px;
+  max-width:1000px;
+  margin:30px auto;
 }
 
 .statCard{
   background:rgba(255,255,255,0.08);
-  padding:15px;
-  border-radius:10px;
-  min-width:150px;
+  backdrop-filter:blur(12px);
+  padding:25px 15px;
+  border-radius:15px;
+  transition:0.3s;
+  border:1px solid rgba(255,255,255,0.1);
 }
+
+.statCard:hover{
+  transform:translateY(-5px);
+  background:rgba(255,255,255,0.12);
+}
+
+.statCard.big{
+  background:linear-gradient(135deg,#00c853,#4caf50);
+  color:white;
+  font-weight:bold;
+}
+
+.statNumber{
+  font-size:28px;
+  font-weight:bold;
+  margin-bottom:8px;
+}
+
+.statLabel{
+  font-size:13px;
+  opacity:0.8;
+  letter-spacing:0.5px;
+}
+
+/* ===== LENTELE ===== */
 
 table{
   width:95%;
@@ -86,6 +115,8 @@ img{
   transition:width 0.5s ease;
 }
 
+/* Podium */
+
 .firstPlace{
   background:linear-gradient(90deg,rgba(255,215,0,0.25),transparent);
 }
@@ -112,11 +143,12 @@ img{
   border-radius:20px;
   display:none;
   font-weight:bold;
+  z-index:1000;
 }
 
 canvas{
   max-width:900px;
-  margin:30px auto;
+  margin:40px auto;
 }
 
 @media(max-width:600px){
@@ -135,9 +167,27 @@ canvas{
 <div id="countdown"></div>
 
 <div class="stats">
-  <div class="statCard" id="totalVotes">Iš viso balsų: 0</div>
-  <div class="statCard" id="voteSpeed">⚡ Tempas: 0 / min</div>
-  <div class="statCard" id="leaderGap">🥇 Atotrūkis: 0</div>
+
+  <div class="statCard big">
+    <div class="statNumber" id="totalVotes">0</div>
+    <div class="statLabel">Iš viso balsų</div>
+  </div>
+
+  <div class="statCard">
+    <div class="statNumber" id="votesPerMinute">0</div>
+    <div class="statLabel">⚡ Balsų per minutę</div>
+  </div>
+
+  <div class="statCard">
+    <div class="statNumber" id="leaderGap">0</div>
+    <div class="statLabel">🥇 Atotrūkis</div>
+  </div>
+
+  <div class="statCard">
+    <div class="statNumber" id="fastestGrower">–</div>
+    <div class="statLabel">🚀 Greičiausiai auga</div>
+  </div>
+
 </div>
 
 <table id="tbl"></table>
@@ -180,11 +230,17 @@ let sorted=data.choices.sort((a,b)=>b.votes-a.votes);
 let topVotes=sorted[0]?.votes||0;
 let totalVotes=0;
 let totalGain=0;
+let fastestGrower={name:"–",gain:0};
 
 sorted.forEach((c,index)=>{
 let name=c.name.replace(/\/+/g,'');
 let oldVotes=previousVotes[name]??c.votes;
 let gain=c.votes-oldVotes;
+
+if(gain>fastestGrower.gain){
+  fastestGrower={name:name,gain:gain};
+}
+
 totalGain+=gain;
 totalVotes+=c.votes;
 
@@ -203,7 +259,7 @@ table.innerHTML+=`
 <strong>${index+1}. ${name}</strong>${rankChange}<br>
 <small>${c.song||''}</small>
 </td>
-<td>${c.votes}</td>
+<td>${c.votes.toLocaleString()}</td>
 <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
 <td>
 <div class="progressBar">
@@ -211,16 +267,22 @@ table.innerHTML+=`
 </div>
 ${c.percentage}%
 </td>
-<td>${diff}</td>
+<td>${diff.toLocaleString()}</td>
 </tr>`;
 
 previousVotes[name]=c.votes;
 previousRanks[name]=index;
 });
 
-document.getElementById("totalVotes").innerHTML="Iš viso balsų: "+totalVotes;
-document.getElementById("voteSpeed").innerHTML="⚡ Tempas: "+Math.round((totalGain/refreshInterval)*60)+" / min";
-document.getElementById("leaderGap").innerHTML="🥇 Atotrūkis: "+(sorted[1]?sorted[0].votes-sorted[1].votes:0);
+let votesPerMinute=Math.round((totalGain/refreshInterval)*60);
+
+document.getElementById("totalVotes").innerHTML=totalVotes.toLocaleString();
+document.getElementById("votesPerMinute").innerHTML=votesPerMinute.toLocaleString();
+document.getElementById("leaderGap").innerHTML=
+  (sorted[1]? (sorted[0].votes-sorted[1].votes).toLocaleString():0);
+
+document.getElementById("fastestGrower").innerHTML=
+  fastestGrower.gain>0 ? fastestGrower.name+" (+"+fastestGrower.gain+")":"–";
 
 if(previousTop && previousTop!==sorted[0].name){
  showToast("🔥 Naujas lyderis: "+sorted[0].name);
@@ -229,7 +291,9 @@ previousTop=sorted[0].name;
 
 updateChart(sorted.slice(0,5));
 
-document.getElementById("lastUpdate").innerHTML="Atnaujinta: "+new Date().toLocaleTimeString();
+document.getElementById("lastUpdate").innerHTML=
+"Atsinaujino: "+new Date().toLocaleTimeString();
+
 timeLeft=refreshInterval;
 
 });
@@ -261,7 +325,8 @@ responsive:true
 setInterval(()=>{
 timeLeft--;
 if(timeLeft<=0) fetchData();
-document.getElementById("countdown").innerHTML="Atnaujinama po: "+timeLeft+" s";
+document.getElementById("countdown").innerHTML=
+"Atnaujinama po: "+timeLeft+" s";
 },1000);
 
 fetchData();
