@@ -216,7 +216,6 @@ function fetchData(){
 fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
 .then(res=>res.json())
 .then(data=>{
-
 const table=document.getElementById("tbl");
 table.innerHTML=`
 <tr>
@@ -290,20 +289,16 @@ document.getElementById("lastUpdate").innerHTML=
 "Atsinaujino: "+new Date().toLocaleTimeString();
 
 timeLeft=refreshInterval;
-
 });
 }
 
 function updateChart(all){
-const dynamicHeight = all.length * 60; // aukštis pagal dalyvių skaičių
-document.getElementById("chart").style.height = dynamicHeight + "px";
-
 const ctx=document.getElementById('chart').getContext('2d');
 
 let labels=all.map(c=>{
   let name=(c.name || "").replace(/\/+/g,'').trim();
   let song=(c.song || "").replace(/\/+/g,'').trim();
-  return [name, song]; // multi-line label
+  return name + "\n" + song; // multi-line X ašyje
 });
 
 let votes=all.map(c=>c.votes);
@@ -319,17 +314,23 @@ label:'Balsai',
 data:votes,
 backgroundColor:'rgba(0,200,83,0.75)',
 borderRadius:6,
-barThickness:22
+barPercentage:0.6
 }]
 },
 options:{
-indexAxis:'y',
+indexAxis:'x', // vertikalūs stulpeliai
 responsive:true,
 maintainAspectRatio:false,
 plugins:{legend:{display:false}},
 scales:{
-x:{ticks:{color:"white"}, grid:{color:"rgba(255,255,255,0.1)"}},
-y:{ticks:{color:"white", font:{size:12}}, grid:{display:false}}
+x:{
+ticks:{color:"white", font:{size:12}},
+grid:{display:false},
+},
+y:{
+ticks:{color:"white"},
+grid:{color:"rgba(255,255,255,0.1)'}
+}
 }
 }
 });
