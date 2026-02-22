@@ -14,17 +14,12 @@ body{
   margin:0;
   padding:20px;
 }
-h2{margin-bottom:5px;}
-#lastUpdate,#countdown{font-size:14px;opacity:0.8;}
 
-button{
-  margin-top:10px;
-  padding:8px 16px;
-  border:none;
-  border-radius:20px;
-  background:#4CAF50;
-  color:white;
-  cursor:pointer;
+h2{margin-bottom:5px;}
+
+#lastUpdate,#countdown{
+  font-size:14px;
+  opacity:0.8;
 }
 
 .stats{
@@ -43,11 +38,29 @@ button{
   transition:0.3s;
   border:1px solid rgba(255,255,255,0.1);
 }
-.statCard:hover{transform:translateY(-5px);}
-.statCard.big{background:linear-gradient(135deg,#00c853,#4caf50);}
 
-.statNumber{font-size:28px;font-weight:bold;margin-bottom:8px;}
-.statLabel{font-size:13px;opacity:0.8;}
+.statCard:hover{
+  transform:translateY(-5px);
+  background:rgba(255,255,255,0.12);
+}
+
+.statCard.big{
+  background:linear-gradient(135deg,#00c853,#4caf50);
+  color:white;
+  font-weight:bold;
+}
+
+.statNumber{
+  font-size:28px;
+  font-weight:bold;
+  margin-bottom:8px;
+}
+
+.statLabel{
+  font-size:13px;
+  opacity:0.8;
+  letter-spacing:0.5px;
+}
 
 table{
   width:95%;
@@ -59,30 +72,56 @@ table{
   border-radius:10px;
   overflow:hidden;
 }
-th{background:rgba(255,255,255,0.15);padding:12px;}
-td{padding:12px;border-bottom:1px solid rgba(255,255,255,0.1);}
+
+th{
+  background:rgba(255,255,255,0.15);
+  padding:12px;
+}
+
+td{
+  padding:12px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
 tr:hover{background:rgba(255,255,255,0.1);}
 
 img{
-  width:45px;height:45px;border-radius:50%;
-  vertical-align:middle;margin-right:10px;object-fit:cover;
+  width:45px;
+  height:45px;
+  border-radius:50%;
+  vertical-align:middle;
+  margin-right:10px;
+  object-fit:cover;
 }
 
 .nameCell{text-align:left;}
 
 .progressBar{
-  width:100%;height:8px;background:rgba(255,255,255,0.2);
-  border-radius:5px;overflow:hidden;margin-bottom:4px;
+  width:100%;
+  height:8px;
+  background:rgba(255,255,255,0.2);
+  border-radius:5px;
+  overflow:hidden;
+  margin-bottom:4px;
 }
+
 .progressFill{
   height:100%;
   background:linear-gradient(90deg,#81C784,#4CAF50);
   transition:width 0.5s ease;
 }
 
-.firstPlace{background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);}
-.secondPlace{background:rgba(192,192,192,0.1);}
-.thirdPlace{background:rgba(205,127,50,0.1);}
+.firstPlace{
+  background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);
+}
+
+.secondPlace{
+  background:rgba(192,192,192,0.1);
+}
+
+.thirdPlace{
+  background:rgba(205,127,50,0.1);
+}
 
 .gainUp{color:#81C784;font-weight:bold;}
 .gainDown{color:#EF9A9A;font-weight:bold;}
@@ -101,7 +140,10 @@ img{
   z-index:1000;
 }
 
-canvas{max-width:900px;margin:40px auto;}
+canvas{
+  max-width:900px;
+  margin:40px auto;
+}
 </style>
 </head>
 
@@ -111,25 +153,27 @@ canvas{max-width:900px;margin:40px auto;}
 <div id="lastUpdate"></div>
 <div id="countdown"></div>
 
-<button onclick="unlockAudio()">🔊 Įjungti garsą</button>
-
 <div class="stats">
   <div class="statCard big">
     <div class="statNumber" id="totalVotes">0</div>
     <div class="statLabel">Iš viso balsų</div>
   </div>
+
   <div class="statCard">
     <div class="statNumber" id="votesPerMinute">0</div>
     <div class="statLabel">⚡ Balsų per minutę</div>
   </div>
+
   <div class="statCard">
     <div class="statNumber" id="leaderGap">0</div>
     <div class="statLabel">🥇 Atotrūkis</div>
   </div>
+
   <div class="statCard">
     <div class="statNumber" id="fastestGrower">–</div>
     <div class="statLabel">🚀 Greičiausiai auga</div>
   </div>
+
   <div class="statCard">
     <div class="statNumber" id="leaderPercent">0%</div>
     <div class="statLabel">🥇 Lyderio dalis</div>
@@ -137,10 +181,9 @@ canvas{max-width:900px;margin:40px auto;}
 </div>
 
 <table id="tbl"></table>
-<canvas id="pieChart"></canvas>
 
+<canvas id="pieChart"></canvas>
 <div id="toast"></div>
-<audio id="toastPlayer"></audio>
 
 <script>
 let previousVotes = {};
@@ -148,43 +191,74 @@ let previousRanks = {};
 let refreshInterval = 5;
 let timeLeft = refreshInterval;
 let pieChart;
-let toastTimeout;
-let audioUnlocked = false;
 
-const player = document.getElementById("toastPlayer");
+/* ================= AI KOMENTARAI ================= */
 
-/* PRISKIRK ČIA MP3 NUORODAS */
-const songPreviews = {
-  "Dalyvis 1": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-  "Dalyvis 2": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
-};
+function generateComment(name, gain, rank, previousRank){
+  if(gain <= 0) return null;
 
-function unlockAudio(){
-  audioUnlocked = true;
-  player.play().then(()=>player.pause()).catch(()=>{});
-  alert("Garsas įjungtas 🎵");
-}
+  const singleVote = [
+    `+1 balsas ${name}! Kažkas spaudė su meile 💚`,
+    `${name} tyliai pasiėmė dar vieną balsą 👀`,
+    `Vienas balsas ${name}. Bet nuo vieno viskas prasideda.`,
+    `${name} +1. Mažas žingsnis, didelės ambicijos 😎`
+  ];
 
-function showToast(text, audioUrl){
-  const toast = document.getElementById("toast");
+  const smallGain = [
+    `${name} renka pagreitį! (+${gain})`,
+    `${gain} nauji balsai ${name}!`,
+    `${name} tyliai kyla aukštyn 📈`,
+    `Publika bunda – ${name} +${gain}!`
+  ];
 
-  clearTimeout(toastTimeout);
+  const bigGain = [
+    `🚀 ${name} šauna į viršų! (+${gain})`,
+    `${name} sprogimas! +${gain} balsų!`,
+    `Kas vyksta?! ${name} +${gain}! 🔥`,
+    `${name} įjungė turbo režimą (+${gain})`
+  ];
 
-  toast.innerText = text;
-  toast.style.display = "block";
+  const leaderBoost = [
+    `👑 Lyderis ${name} stiprina poziciją!`,
+    `${name} sako: „Aš čia valdau.“`,
+    `Lyderio pareiškimas iš ${name}!`,
+    `${name} dar labiau atsiplėšia 👑`
+  ];
 
-  if(audioUnlocked && audioUrl){
-    player.src = audioUrl;
-    player.currentTime = 0;
-    player.play();
+  const overtake = [
+    `🚨 ${name} aplenkė konkurentą!`,
+    `${name} keičia žaidimo taisykles!`,
+    `Pozicijų rokiruotė! ${name} kyla!`,
+    `${name} sako: „Pasitrauk iš kelio!“`
+  ];
+
+  if(previousRank !== undefined && rank < previousRank){
+    return overtake[Math.floor(Math.random()*overtake.length)];
   }
 
-  toastTimeout = setTimeout(()=>{
-    toast.style.display = "none";
-    player.pause();
-    player.currentTime = 0;
-  },3000);
+  if(rank === 0){
+    return leaderBoost[Math.floor(Math.random()*leaderBoost.length)];
+  }
+
+  if(gain === 1){
+    return singleVote[Math.floor(Math.random()*singleVote.length)];
+  }
+
+  if(gain >= 5){
+    return bigGain[Math.floor(Math.random()*bigGain.length)];
+  }
+
+  return smallGain[Math.floor(Math.random()*smallGain.length)];
 }
+
+function showToast(text){
+  const toast=document.getElementById("toast");
+  toast.innerText=text;
+  toast.style.display="block";
+  setTimeout(()=>toast.style.display="none",3000);
+}
+
+/* ================= FETCH ================= */
 
 function fetchData(){
   fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
@@ -212,9 +286,9 @@ function fetchData(){
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
 
-      if(gain>0){
-        showToast(`${name} +${gain} balsų!`, songPreviews[name]);
-      }
+      let previousRank=previousRanks[name];
+      let comment=generateComment(name,gain,index,previousRank);
+      if(comment) showToast(comment);
 
       if(gain>fastestGrower.gain){
         fastestGrower={name:name,gain:gain};
@@ -276,8 +350,23 @@ function updatePieChart(top5){
 
   pieChart=new Chart(ctx,{
     type:'pie',
-    data:{labels:labels,datasets:[{data:votes}]},
-    options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+    data:{
+      labels:labels,
+      datasets:[{
+        data:votes,
+        backgroundColor:[
+          '#F6DFA6',
+          '#D9D9D9',
+          '#D7B49E',
+          '#A5D6A7',
+          '#B2DFDB'
+        ]
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{position:'bottom'}}
+    }
   });
 }
 
