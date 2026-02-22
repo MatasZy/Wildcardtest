@@ -22,6 +22,19 @@ h2{margin-bottom:5px;}
   opacity:0.8;
 }
 
+/* AI komentaras */
+#aiComment{
+  max-width:900px;
+  margin:20px auto;
+  padding:15px 20px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(10px);
+  border-radius:12px;
+  font-size:15px;
+  line-height:1.4;
+  min-height:48px;
+}
+
 .stats{
   display:grid;
   grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
@@ -126,20 +139,6 @@ img{
 .gainUp{color:#81C784;font-weight:bold;}
 .gainDown{color:#EF9A9A;font-weight:bold;}
 
-#toast{
-  position:fixed;
-  top:20px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#E8C97A;
-  color:black;
-  padding:10px 20px;
-  border-radius:20px;
-  display:none;
-  font-weight:bold;
-  z-index:1000;
-}
-
 canvas{
   max-width:900px;
   margin:40px auto;
@@ -159,6 +158,8 @@ canvas{
 <h2>🏆 Balsavimo rezultatai</h2>
 <div id="lastUpdate"></div>
 <div id="countdown"></div>
+
+<div id="aiComment">🤖 AI analizuoja situaciją...</div>
 
 <div class="stats">
   <div class="statCard big">
@@ -190,21 +191,41 @@ canvas{
 <table id="tbl"></table>
 
 <canvas id="pieChart"></canvas>
-<div id="toast"></div>
 
 <script>
 let previousVotes = {};
-let previousRanks = {};
-let previousTop = null;
 let refreshInterval = 5;
 let timeLeft = refreshInterval;
 let pieChart;
 
-function showToast(text){
-  const toast=document.getElementById("toast");
-  toast.innerText=text;
-  toast.style.display="block";
-  setTimeout(()=>toast.style.display="none",3000);
+function generateAIComment(sorted, totalGain) {
+  if (!sorted || sorted.length < 2) return "Duomenų nepakanka analizei.";
+
+  const leader = sorted[0];
+  const second = sorted[1];
+  const gap = leader.votes - second.votes;
+
+  let comment = "";
+
+  if (gap > 1000) {
+    comment += `🏆 ${leader.name} užtikrintai pirmauja ir turi solidų ${gap.toLocaleString()} balsų pranašumą. `;
+  } else if (gap > 200) {
+    comment += `🥇 ${leader.name} išlaiko aiškią persvarą (${gap.toLocaleString()} balsų). `;
+  } else {
+    comment += `🔥 Kova labai įtempta! ${leader.name} pirmauja tik ${gap.toLocaleString()} balsų skirtumu. `;
+  }
+
+  if (totalGain > 300) {
+    comment += "Balsavimo tempas šiuo metu labai aukštas.";
+  } else if (totalGain > 100) {
+    comment += "Aktyvumas išlieka stabilus.";
+  } else if (totalGain > 0) {
+    comment += "Balsavimas šiek tiek sulėtėjo.";
+  } else {
+    comment += "Šiuo metu augimas beveik sustojęs.";
+  }
+
+  return comment;
 }
 
 function fetchData(){
@@ -225,16 +246,11 @@ function fetchData(){
     let topVotes=sorted[0]?.votes||0;
     let totalVotes=0;
     let totalGain=0;
-    let fastestGrower={name:"–",gain:0};
 
     sorted.forEach((c,index)=>{
       let name=c.name.replace(/\/+/g,'');
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
-
-      if(gain>fastestGrower.gain){
-        fastestGrower={name:name,gain:gain};
-      }
 
       totalGain+=gain;
       totalVotes+=c.votes;
@@ -260,25 +276,25 @@ function fetchData(){
         </tr>`;
 
       previousVotes[name]=c.votes;
-      previousRanks[name]=index;
     });
 
-    let votesPerMinute=Math.round((totalGain/refreshInterval)*60);
-
     document.getElementById("totalVotes").innerHTML=totalVotes.toLocaleString();
-    document.getElementById("votesPerMinute").innerHTML=votesPerMinute.toLocaleString();
+    document.getElementById("votesPerMinute").innerHTML=
+      Math.round((totalGain/refreshInterval)*60).toLocaleString();
     document.getElementById("leaderGap").innerHTML=
       (sorted[1]? (sorted[0].votes-sorted[1].votes).toLocaleString():0);
-    document.getElementById("fastestGrower").innerHTML=
-      fastestGrower.gain>0 ? fastestGrower.name+" (+"+fastestGrower.gain+")":"–";
 
-    let leaderPercent = totalVotes ? Math.round((sorted[0].votes/totalVotes)*100) : 0;
-    document.getElementById("leaderPercent").innerHTML = leaderPercent + "%";
+    document.getElementById("leaderPercent").innerHTML =
+      totalVotes ? Math.round((sorted[0].votes/totalVotes)*100) + "%" : "0%";
+
+    document.getElementById("aiComment").innerText =
+      generateAIComment(sorted, totalGain);
 
     updatePieChart(sorted.slice(0,5));
 
     document.getElementById("lastUpdate").innerHTML=
       "Atsinaujino: "+new Date().toLocaleTimeString();
+
     timeLeft=refreshInterval;
   });
 }
