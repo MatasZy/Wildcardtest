@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <title>🏆 Balsavimo rezultatai</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
 <style>
 body{
@@ -35,13 +37,11 @@ h2{margin-bottom:5px;}
   backdrop-filter:blur(12px);
   padding:25px 15px;
   border-radius:15px;
-  transition:0.3s;
   border:1px solid rgba(255,255,255,0.1);
 }
 
 .statCard.big{
   background:linear-gradient(135deg,#00c853,#4caf50);
-  color:white;
   font-weight:bold;
 }
 
@@ -100,20 +100,14 @@ img{
 .progressFill{
   height:100%;
   background:linear-gradient(90deg,#81c784,#4caf50);
-  transition:width 0.5s ease;
 }
 
-.firstPlace{
-  background:linear-gradient(90deg,rgba(255,215,0,0.25),transparent);
-}
+.firstPlace{background:linear-gradient(90deg,rgba(255,215,0,0.25),transparent);}
+.secondPlace{background:rgba(192,192,192,0.15);}
+.thirdPlace{background:rgba(205,127,50,0.15);}
 
-.secondPlace{
-  background:rgba(192,192,192,0.15);
-}
-
-.thirdPlace{
-  background:rgba(205,127,50,0.15);
-}
+.gainUp{color:#4cff4c;font-weight:bold;}
+.gainDown{color:#ff4c4c;font-weight:bold;}
 
 canvas{
   max-width:1000px;
@@ -138,6 +132,21 @@ canvas{
     <div class="statNumber" id="votesPerMinute">0</div>
     <div class="statLabel">⚡ Balsų per minutę</div>
   </div>
+
+  <div class="statCard">
+    <div class="statNumber" id="leaderGap">0</div>
+    <div class="statLabel">🥇 Atotrūkis</div>
+  </div>
+
+  <div class="statCard">
+    <div class="statNumber" id="fastestGrower">–</div>
+    <div class="statLabel">🚀 Greičiausiai auga</div>
+  </div>
+
+  <div class="statCard">
+    <div class="statNumber" id="leaderPercent">0%</div>
+    <div class="statLabel">🥇 Lyderio dalis</div>
+  </div>
 </div>
 
 <table id="tbl"></table>
@@ -146,15 +155,19 @@ canvas{
 <canvas id="liveChart"></canvas>
 
 <script>
-let previousVotes = {};
-let previousRanks = {};
-let refreshInterval = 60; // kas minutę
-let timeLeft = refreshInterval;
-let pieChart;
-let liveChart;
+Chart.register(ChartDataLabels);
 
+let previousVotes = {};
+let minuteAccumulator = {};
+let lastMinuteMark = Date.now();
 let minuteHistory = [];
 let maxPoints = 15;
+
+let refreshInterval = 5;
+let timeLeft = refreshInterval;
+
+let pieChart;
+let liveChart;
 
 function fetchData(){
   fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
@@ -168,19 +181,29 @@ function fetchData(){
         <th>Balsai</th>
         <th>Pokytis</th>
         <th>%</th>
+        <th>Skirtumas</th>
       </tr>`;
 
     let sorted=data.choices.sort((a,b)=>b.votes-a.votes);
     let totalVotes=0;
     let totalGain=0;
+    let fastestGrower={name:"–",gain:0};
 
     sorted.forEach((c,index)=>{
       let name=c.name.replace(/\/+/g,'');
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
 
+      minuteAccumulator[name]=(minuteAccumulator[name]||0)+gain;
+
+      if(gain>fastestGrower.gain){
+        fastestGrower={name:name,gain:gain};
+      }
+
       totalGain+=gain;
       totalVotes+=c.votes;
+
+      let diff=index===0?0:sorted[0].votes-c.votes;
 
       table.innerHTML+=`
         <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
@@ -189,25 +212,51 @@ function fetchData(){
             <strong>${index+1}. ${name}</strong>
           </td>
           <td>${c.votes.toLocaleString()}</td>
-          <td>${gain>=0?'+':''}${gain}</td>
+          <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
           <td>
             <div class="progressBar">
               <div class="progressFill" style="width:${c.percentage}%"></div>
             </div>
             ${c.percentage}%
           </td>
+          <td>${diff.toLocaleString()}</td>
         </tr>`;
 
       previousVotes[name]=c.votes;
-      previousRanks[name]=index;
     });
 
     document.getElementById("totalVotes").innerHTML=totalVotes.toLocaleString();
     document.getElementById("votesPerMinute").innerHTML=totalGain.toLocaleString();
+    document.getElementById("leaderGap").innerHTML=
+      sorted[1]?(sorted[0].votes-sorted[1].votes).toLocaleString():0;
+    document.getElementById("fastestGrower").innerHTML=
+      fastestGrower.gain>0?fastestGrower.name+" (+"+fastestGrower.gain+")":"–";
+    document.getElementById("leaderPercent").innerHTML=
+      totalVotes?Math.round(sorted[0].votes/totalVotes*100)+"%":"0%";
 
     updatePieChart(sorted.slice(0,5));
-    updateMinuteHistory(sorted,totalGain);
-    updateLiveChart(sorted);
+
+    // === Kas minutę įrašom tašką ===
+    if(Date.now()-lastMinuteMark>=60000){
+      let minuteData={time:new Date().toLocaleTimeString()};
+      let total=0;
+
+      sorted.forEach(c=>{
+        let name=c.name.replace(/\/+/g,'');
+        minuteData[name]=minuteAccumulator[name]||0;
+        total+=minuteAccumulator[name]||0;
+      });
+
+      minuteData.total=total;
+      minuteHistory.push(minuteData);
+
+      if(minuteHistory.length>maxPoints) minuteHistory.shift();
+
+      minuteAccumulator={};
+      lastMinuteMark=Date.now();
+
+      updateLiveChart(sorted);
+    }
 
     document.getElementById("lastUpdate").innerHTML=
       "Atnaujinta: "+new Date().toLocaleTimeString();
@@ -216,28 +265,8 @@ function fetchData(){
   });
 }
 
-function updateMinuteHistory(sorted,totalGain){
-  let minuteData={};
-  minuteData.time=new Date().toLocaleTimeString();
-
-  sorted.forEach(c=>{
-    let name=c.name.replace(/\/+/g,'');
-    let oldVotes=previousVotes[name]??c.votes;
-    let gain=c.votes-oldVotes;
-    minuteData[name]=gain;
-  });
-
-  minuteData.total=totalGain;
-  minuteHistory.push(minuteData);
-
-  if(minuteHistory.length>maxPoints){
-    minuteHistory.shift();
-  }
-}
-
 function updatePieChart(top5){
   const ctx=document.getElementById('pieChart').getContext('2d');
-
   if(pieChart) pieChart.destroy();
 
   pieChart=new Chart(ctx,{
@@ -257,28 +286,24 @@ function updatePieChart(top5){
         borderColor:'rgba(255,255,255,0.2)'
       }]
     },
-    options:{
-      responsive:true,
-      plugins:{legend:{position:'bottom'}}
-    }
+    options:{responsive:true,plugins:{legend:{position:'bottom'}}}
   });
 }
 
 function updateLiveChart(sorted){
   const ctx=document.getElementById('liveChart').getContext('2d');
-
   if(liveChart) liveChart.destroy();
 
   let labels=minuteHistory.map(m=>m.time);
   let datasets=[];
 
-  sorted.slice(0,5).forEach((c,i)=>{
+  sorted.slice(0,5).forEach(c=>{
     let name=c.name.replace(/\/+/g,'');
     datasets.push({
       label:name,
       data:minuteHistory.map(m=>m[name]||0),
-      tension:0.3,
-      borderWidth:2
+      borderWidth:2,
+      tension:0.3
     });
   });
 
@@ -297,7 +322,14 @@ function updateLiveChart(sorted){
       responsive:true,
       animation:false,
       scales:{y:{beginAtZero:true}},
-      plugins:{legend:{position:'bottom'}}
+      plugins:{
+        legend:{position:'bottom'},
+        datalabels:{
+          color:'#ffffff',
+          align:'top',
+          formatter:(value)=>value>0?value:''
+        }
+      }
     }
   });
 }
