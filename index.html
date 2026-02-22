@@ -30,8 +30,8 @@ h2{margin-bottom:5px;}
   backdrop-filter:blur(10px);
   border-radius:12px;
   font-size:15px;
-  line-height:1.4;
-  min-height:48px;
+  line-height:1.5;
+  min-height:52px;
   transition:0.3s;
 }
 
@@ -52,11 +52,6 @@ h2{margin-bottom:5px;}
   border:1px solid rgba(255,255,255,0.1);
 }
 
-.statCard:hover{
-  transform:translateY(-5px);
-  background:rgba(255,255,255,0.12);
-}
-
 .statCard.big{
   background:linear-gradient(135deg,#00c853,#4caf50);
   font-weight:bold;
@@ -71,7 +66,6 @@ h2{margin-bottom:5px;}
 .statLabel{
   font-size:13px;
   opacity:0.8;
-  letter-spacing:0.5px;
 }
 
 table{
@@ -85,16 +79,8 @@ table{
   overflow:hidden;
 }
 
-th{
-  background:rgba(255,255,255,0.15);
-  padding:12px;
-}
-
-td{
-  padding:12px;
-  border-bottom:1px solid rgba(255,255,255,0.1);
-}
-
+th{background:rgba(255,255,255,0.15);padding:12px;}
+td{padding:12px;border-bottom:1px solid rgba(255,255,255,0.1);}
 tr:hover{background:rgba(255,255,255,0.1);}
 
 img{
@@ -126,7 +112,6 @@ img{
 .firstPlace{
   background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);
 }
-
 .secondPlace{ background:rgba(192,192,192,0.1); }
 .thirdPlace{ background:rgba(205,127,50,0.1); }
 
@@ -146,7 +131,7 @@ canvas{
 <div id="lastUpdate"></div>
 <div id="countdown"></div>
 
-<div id="aiComment">🤖 AI analizuoja situaciją...</div>
+<div id="aiComment">🤖 AI stebi situaciją...</div>
 
 <div class="stats">
   <div class="statCard big">
@@ -172,9 +157,11 @@ canvas{
 
 <script>
 let previousVotes = {};
+let previousRanks = {};
 let previousLeader = null;
 let previousGap = null;
 let commentMemory = "";
+
 let refreshInterval = 5;
 let timeLeft = refreshInterval;
 let pieChart;
@@ -183,8 +170,9 @@ function cleanName(name){
   return name.replace(/\/+/g,'');
 }
 
-function generateAIComment(sorted, totalGain){
-  if (!sorted || sorted.length < 2) return "Duomenų nepakanka.";
+function generateAIComment(sorted, gains){
+
+  if(sorted.length < 2) return "Duomenų nepakanka.";
 
   const leader = sorted[0];
   const second = sorted[1];
@@ -197,41 +185,47 @@ function generateAIComment(sorted, totalGain){
 
   let comments = [];
 
-  if (previousLeader && previousLeader !== leaderName){
-    comments.push(`🚨 Lyderio pasikeitimas! ${leaderName} išsiveržia į pirmą vietą.`);
+  // 🔄 Aplenkti dalyviai
+  sorted.forEach((c,i)=>{
+    const name = cleanName(c.name);
+    if(previousRanks[name] != null && previousRanks[name] > i){
+      comments.push(`🚀 ${name} kyla į ${i+1} vietą!`);
+    }
+  });
+
+  // 🏁 Lyderio pasikeitimas
+  if(previousLeader && previousLeader !== leaderName){
+    comments.push(`🚨 Naujas lyderis – ${leaderName}!`);
   }
 
-  if (gap < 100){
-    comments.push(`🔥 Tik ${gap} balsų skiria ${leaderName} ir ${secondName}! Įtampa auga.`);
-  } else if (gap < 300){
-    comments.push(`⚔ ${leaderName} pirmauja, bet ${secondName} labai arti.`);
+  // 🔥 Finišo tiesioji
+  if(gap < 50){
+    comments.push(`🔥 Tik ${gap} balsų skiria ${leaderName} ir ${secondName}! Drama!`);
   }
 
-  if (gapChange > 50){
-    comments.push(`📈 ${leaderName} didina atotrūkį (+${gapChange}).`);
+  // 📈 Atotrūkio pokytis
+  if(gapChange > 30){
+    comments.push(`📈 ${leaderName} didina pranašumą (+${gapChange}).`);
   }
-  if (gapChange < -50){
-    comments.push(`📉 ${secondName} sparčiai mažina atsilikimą.`);
-  }
-
-  if (totalGain > 400){
-    comments.push("⚡ Staigus balsavimo suaktyvėjimas!");
-  } else if (totalGain > 200){
-    comments.push("📊 Intensyvus balsavimas tęsiasi.");
-  } else if (totalGain > 0){
-    comments.push("⏳ Tempas šiek tiek sulėtėjo.");
-  } else {
-    comments.push("🧊 Šiuo metu ramu – naujų balsų beveik nėra.");
+  if(gapChange < -30){
+    comments.push(`📉 ${secondName} agresyviai mažina atsilikimą.`);
   }
 
-  if (gap > 1000){
-    comments.push(`🏆 ${leaderName} užtikrintai kontroliuoja situaciją.`);
+  // 🚀 Greičiausiai augantis
+  let fastest = gains.sort((a,b)=>b.gain-a.gain)[0];
+  if(fastest && fastest.gain > 20){
+    comments.push(`⚡ ${fastest.name} demonstruoja stipriausią augimą (+${fastest.gain}).`);
+  }
+
+  // 🧊 Jei nieko ypatingo
+  if(comments.length === 0){
+    comments.push(`${leaderName} išlieka priekyje, situacija stabili.`);
   }
 
   let newComment = comments[Math.floor(Math.random()*comments.length)];
 
-  if (newComment === commentMemory && comments.length > 1){
-    newComment = comments.find(c => c !== commentMemory);
+  if(newComment === commentMemory && comments.length > 1){
+    newComment = comments.find(c=>c!==commentMemory);
   }
 
   commentMemory = newComment;
@@ -245,6 +239,7 @@ function fetchData(){
   fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
   .then(res=>res.json())
   .then(data=>{
+
     const table=document.getElementById("tbl");
     table.innerHTML=`
       <tr>
@@ -259,11 +254,14 @@ function fetchData(){
     let topVotes=sorted[0]?.votes||0;
     let totalVotes=0;
     let totalGain=0;
+    let gains=[];
 
     sorted.forEach((c,index)=>{
       let name=cleanName(c.name);
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
+
+      gains.push({name:name,gain:gain});
 
       totalGain+=gain;
       totalVotes+=c.votes;
@@ -289,6 +287,7 @@ function fetchData(){
         </tr>`;
 
       previousVotes[name]=c.votes;
+      previousRanks[name]=index;
     });
 
     document.getElementById("totalVotes").innerHTML=totalVotes.toLocaleString();
@@ -300,7 +299,7 @@ function fetchData(){
       totalVotes ? Math.round((sorted[0].votes/totalVotes)*100)+"%" : "0%";
 
     document.getElementById("aiComment").innerText =
-      generateAIComment(sorted,totalGain);
+      generateAIComment(sorted,gains);
 
     updatePieChart(sorted.slice(0,5));
 
