@@ -22,7 +22,6 @@ h2{margin-bottom:5px;}
   opacity:0.8;
 }
 
-/* AI komentaras */
 #aiComment{
   max-width:900px;
   margin:20px auto;
@@ -33,6 +32,7 @@ h2{margin-bottom:5px;}
   font-size:15px;
   line-height:1.4;
   min-height:48px;
+  transition:0.3s;
 }
 
 .stats{
@@ -59,7 +59,6 @@ h2{margin-bottom:5px;}
 
 .statCard.big{
   background:linear-gradient(135deg,#00c853,#4caf50);
-  color:white;
   font-weight:bold;
 }
 
@@ -128,13 +127,8 @@ img{
   background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);
 }
 
-.secondPlace{
-  background:rgba(192,192,192,0.1);
-}
-
-.thirdPlace{
-  background:rgba(205,127,50,0.1);
-}
+.secondPlace{ background:rgba(192,192,192,0.1); }
+.thirdPlace{ background:rgba(205,127,50,0.1); }
 
 .gainUp{color:#81C784;font-weight:bold;}
 .gainDown{color:#EF9A9A;font-weight:bold;}
@@ -142,13 +136,6 @@ img{
 canvas{
   max-width:900px;
   margin:40px auto;
-}
-
-@media(max-width:600px){
-  th:nth-child(3),td:nth-child(3),
-  th:nth-child(5),td:nth-child(5){
-    display:none;
-  }
 }
 </style>
 </head>
@@ -166,22 +153,14 @@ canvas{
     <div class="statNumber" id="totalVotes">0</div>
     <div class="statLabel">Iš viso balsų</div>
   </div>
-
   <div class="statCard">
     <div class="statNumber" id="votesPerMinute">0</div>
     <div class="statLabel">⚡ Balsų per minutę</div>
   </div>
-
   <div class="statCard">
     <div class="statNumber" id="leaderGap">0</div>
     <div class="statLabel">🥇 Atotrūkis</div>
   </div>
-
-  <div class="statCard">
-    <div class="statNumber" id="fastestGrower">–</div>
-    <div class="statLabel">🚀 Greičiausiai auga</div>
-  </div>
-
   <div class="statCard">
     <div class="statNumber" id="leaderPercent">0%</div>
     <div class="statLabel">🥇 Lyderio dalis</div>
@@ -189,43 +168,77 @@ canvas{
 </div>
 
 <table id="tbl"></table>
-
 <canvas id="pieChart"></canvas>
 
 <script>
 let previousVotes = {};
+let previousLeader = null;
+let previousGap = null;
+let commentMemory = "";
 let refreshInterval = 5;
 let timeLeft = refreshInterval;
 let pieChart;
 
-function generateAIComment(sorted, totalGain) {
-  if (!sorted || sorted.length < 2) return "Duomenų nepakanka analizei.";
+function cleanName(name){
+  return name.replace(/\/+/g,'');
+}
+
+function generateAIComment(sorted, totalGain){
+  if (!sorted || sorted.length < 2) return "Duomenų nepakanka.";
 
   const leader = sorted[0];
   const second = sorted[1];
+
+  const leaderName = cleanName(leader.name);
+  const secondName = cleanName(second.name);
+
   const gap = leader.votes - second.votes;
+  const gapChange = previousGap !== null ? gap - previousGap : 0;
 
-  let comment = "";
+  let comments = [];
 
-  if (gap > 1000) {
-    comment += `🏆 ${leader.name} užtikrintai pirmauja ir turi solidų ${gap.toLocaleString()} balsų pranašumą. `;
-  } else if (gap > 200) {
-    comment += `🥇 ${leader.name} išlaiko aiškią persvarą (${gap.toLocaleString()} balsų). `;
-  } else {
-    comment += `🔥 Kova labai įtempta! ${leader.name} pirmauja tik ${gap.toLocaleString()} balsų skirtumu. `;
+  if (previousLeader && previousLeader !== leaderName){
+    comments.push(`🚨 Lyderio pasikeitimas! ${leaderName} išsiveržia į pirmą vietą.`);
   }
 
-  if (totalGain > 300) {
-    comment += "Balsavimo tempas šiuo metu labai aukštas.";
-  } else if (totalGain > 100) {
-    comment += "Aktyvumas išlieka stabilus.";
-  } else if (totalGain > 0) {
-    comment += "Balsavimas šiek tiek sulėtėjo.";
-  } else {
-    comment += "Šiuo metu augimas beveik sustojęs.";
+  if (gap < 100){
+    comments.push(`🔥 Tik ${gap} balsų skiria ${leaderName} ir ${secondName}! Įtampa auga.`);
+  } else if (gap < 300){
+    comments.push(`⚔ ${leaderName} pirmauja, bet ${secondName} labai arti.`);
   }
 
-  return comment;
+  if (gapChange > 50){
+    comments.push(`📈 ${leaderName} didina atotrūkį (+${gapChange}).`);
+  }
+  if (gapChange < -50){
+    comments.push(`📉 ${secondName} sparčiai mažina atsilikimą.`);
+  }
+
+  if (totalGain > 400){
+    comments.push("⚡ Staigus balsavimo suaktyvėjimas!");
+  } else if (totalGain > 200){
+    comments.push("📊 Intensyvus balsavimas tęsiasi.");
+  } else if (totalGain > 0){
+    comments.push("⏳ Tempas šiek tiek sulėtėjo.");
+  } else {
+    comments.push("🧊 Šiuo metu ramu – naujų balsų beveik nėra.");
+  }
+
+  if (gap > 1000){
+    comments.push(`🏆 ${leaderName} užtikrintai kontroliuoja situaciją.`);
+  }
+
+  let newComment = comments[Math.floor(Math.random()*comments.length)];
+
+  if (newComment === commentMemory && comments.length > 1){
+    newComment = comments.find(c => c !== commentMemory);
+  }
+
+  commentMemory = newComment;
+  previousLeader = leaderName;
+  previousGap = gap;
+
+  return newComment;
 }
 
 function fetchData(){
@@ -248,7 +261,7 @@ function fetchData(){
     let totalGain=0;
 
     sorted.forEach((c,index)=>{
-      let name=c.name.replace(/\/+/g,'');
+      let name=cleanName(c.name);
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
 
@@ -283,12 +296,11 @@ function fetchData(){
       Math.round((totalGain/refreshInterval)*60).toLocaleString();
     document.getElementById("leaderGap").innerHTML=
       (sorted[1]? (sorted[0].votes-sorted[1].votes).toLocaleString():0);
-
     document.getElementById("leaderPercent").innerHTML =
-      totalVotes ? Math.round((sorted[0].votes/totalVotes)*100) + "%" : "0%";
+      totalVotes ? Math.round((sorted[0].votes/totalVotes)*100)+"%" : "0%";
 
     document.getElementById("aiComment").innerText =
-      generateAIComment(sorted, totalGain);
+      generateAIComment(sorted,totalGain);
 
     updatePieChart(sorted.slice(0,5));
 
@@ -301,7 +313,7 @@ function fetchData(){
 
 function updatePieChart(top5){
   const ctx=document.getElementById('pieChart').getContext('2d');
-  let labels=top5.map(c=>c.name.replace(/\/+/g,''));
+  let labels=top5.map(c=>cleanName(c.name));
   let votes=top5.map(c=>c.votes);
 
   if(pieChart) pieChart.destroy();
@@ -313,11 +325,7 @@ function updatePieChart(top5){
       datasets:[{
         data:votes,
         backgroundColor:[
-          '#F6DFA6',
-          '#D9D9D9',
-          '#D7B49E',
-          '#A5D6A7',
-          '#B2DFDB'
+          '#F6DFA6','#D9D9D9','#D7B49E','#A5D6A7','#B2DFDB'
         ]
       }]
     },
