@@ -22,7 +22,6 @@ h2{margin-bottom:5px;}
   opacity:0.8;
 }
 
-/* ===== STATISTIKA ===== */
 .stats{
   display:grid;
   grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
@@ -63,7 +62,6 @@ h2{margin-bottom:5px;}
   letter-spacing:0.5px;
 }
 
-/* ===== LENTELE ===== */
 table{
   width:95%;
   max-width:1000px;
@@ -109,32 +107,31 @@ img{
 
 .progressFill{
   height:100%;
-  background:linear-gradient(90deg,#4cff4c,#00c853);
+  background:linear-gradient(90deg,#81C784,#4CAF50);
   transition:width 0.5s ease;
 }
 
-/* Podium */
 .firstPlace{
-  background:linear-gradient(90deg,rgba(255,215,0,0.25),transparent);
+  background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);
 }
 
 .secondPlace{
-  background:rgba(192,192,192,0.15);
+  background:rgba(192,192,192,0.1);
 }
 
 .thirdPlace{
-  background:rgba(205,127,50,0.15);
+  background:rgba(205,127,50,0.1);
 }
 
-.gainUp{color:#4cff4c;font-weight:bold;}
-.gainDown{color:#ff4c4c;font-weight:bold;}
+.gainUp{color:#81C784;font-weight:bold;}
+.gainDown{color:#EF9A9A;font-weight:bold;}
 
 #toast{
   position:fixed;
   top:20px;
   left:50%;
   transform:translateX(-50%);
-  background:#ffd700;
+  background:#E8C97A;
   color:black;
   padding:10px 20px;
   border-radius:20px;
@@ -164,7 +161,6 @@ canvas{
 <div id="countdown"></div>
 
 <div class="stats">
-
   <div class="statCard big">
     <div class="statNumber" id="totalVotes">0</div>
     <div class="statLabel">Iš viso balsų</div>
@@ -189,13 +185,11 @@ canvas{
     <div class="statNumber" id="leaderPercent">0%</div>
     <div class="statLabel">🥇 Lyderio dalis</div>
   </div>
-
 </div>
 
 <table id="tbl"></table>
 
 <canvas id="pieChart"></canvas>
-
 <div id="toast"></div>
 
 <script>
@@ -234,7 +228,6 @@ function fetchData(){
     let fastestGrower={name:"–",gain:0};
 
     sorted.forEach((c,index)=>{
-      // Pašaliname // simbolius iš pavadinimų
       let name=c.name.replace(/\/+/g,'');
       let oldVotes=previousVotes[name]??c.votes;
       let gain=c.votes-oldVotes;
@@ -248,17 +241,11 @@ function fetchData(){
 
       let diff=index===0?0:topVotes-c.votes;
 
-      let rankChange="";
-      if(previousRanks[name]!=null){
-        if(previousRanks[name]>index) rankChange=" 🔼";
-        if(previousRanks[name]<index) rankChange=" 🔽";
-      }
-
       table.innerHTML+=`
         <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
           <td class="nameCell">
             <img src="${c.image||'https://via.placeholder.com/45'}">
-            <strong>${index+1}. ${name}</strong>${rankChange}<br>
+            <strong>${index+1}. ${name}</strong><br>
             <small>${c.song||''}</small>
           </td>
           <td>${c.votes.toLocaleString()}</td>
@@ -271,12 +258,13 @@ function fetchData(){
           </td>
           <td>${diff.toLocaleString()}</td>
         </tr>`;
+
       previousVotes[name]=c.votes;
       previousRanks[name]=index;
     });
 
-    // Statistikos kortelės
     let votesPerMinute=Math.round((totalGain/refreshInterval)*60);
+
     document.getElementById("totalVotes").innerHTML=totalVotes.toLocaleString();
     document.getElementById("votesPerMinute").innerHTML=votesPerMinute.toLocaleString();
     document.getElementById("leaderGap").innerHTML=
@@ -286,11 +274,6 @@ function fetchData(){
 
     let leaderPercent = totalVotes ? Math.round((sorted[0].votes/totalVotes)*100) : 0;
     document.getElementById("leaderPercent").innerHTML = leaderPercent + "%";
-
-    if(previousTop && previousTop!==sorted[0].name){
-      showToast("🔥 Naujas lyderis: "+sorted[0].name);
-    }
-    previousTop=sorted[0].name;
 
     updatePieChart(sorted.slice(0,5));
 
@@ -302,7 +285,7 @@ function fetchData(){
 
 function updatePieChart(top5){
   const ctx=document.getElementById('pieChart').getContext('2d');
-  let labels=top5.map(c=>c.name.replace(/\/+/g,'')); // dar kartą užtikriname, kad // pašalinta
+  let labels=top5.map(c=>c.name.replace(/\/+/g,''));
   let votes=top5.map(c=>c.votes);
 
   if(pieChart) pieChart.destroy();
@@ -314,7 +297,11 @@ function updatePieChart(top5){
       datasets:[{
         data:votes,
         backgroundColor:[
-          '#FFD700','#C0C0C0','#CD7F32','#4caf50','#00c853'
+          '#F6DFA6',
+          '#D9D9D9',
+          '#D7B49E',
+          '#A5D6A7',
+          '#B2DFDB'
         ]
       }]
     },
