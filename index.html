@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <title>🏆 Balsavimo rezultatai</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <style>
-
 #soundBtn{
   position:fixed;
   bottom:20px;
@@ -21,10 +21,6 @@
   z-index:1001;
 }
 
-#soundBtn:hover{
-  transform:scale(1.05);
-}
-
 .playBtn{
   margin-top:6px;
   padding:4px 10px;
@@ -36,11 +32,6 @@
   font-weight:bold;
 }
 
-.playBtn:hover{
-  transform:scale(1.1);
-}
-
-/* VIDEO FONAS */
 #videoBackground {
   position: fixed;
   top: 0;
@@ -77,13 +68,6 @@ body{
   padding:20px;
 }
 
-h2{margin-bottom:5px;}
-
-#lastUpdate,#countdown{
-  font-size:14px;
-  opacity:0.8;
-}
-
 .stats{
   display:grid;
   grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
@@ -97,30 +81,6 @@ h2{margin-bottom:5px;}
   backdrop-filter:blur(12px);
   padding:25px 15px;
   border-radius:15px;
-  transition:0.3s;
-  border:1px solid rgba(255,255,255,0.1);
-}
-
-.statCard:hover{
-  transform:translateY(-5px);
-  background:rgba(255,255,255,0.12);
-}
-
-.statCard.big{
-  background:linear-gradient(135deg,#00c853,#4caf50);
-  color:white;
-  font-weight:bold;
-}
-
-.statNumber{
-  font-size:28px;
-  font-weight:bold;
-  margin-bottom:8px;
-}
-
-.statLabel{
-  font-size:13px;
-  opacity:0.8;
 }
 
 table{
@@ -129,63 +89,15 @@ table{
   margin:auto;
   border-collapse:collapse;
   background:rgba(255,255,255,0.08);
-  backdrop-filter:blur(10px);
   border-radius:10px;
   overflow:hidden;
 }
 
-th{
-  background:rgba(255,255,255,0.15);
-  padding:12px;
-}
-
-td{
-  padding:12px;
-  border-bottom:1px solid rgba(255,255,255,0.1);
-}
-
+th, td{padding:12px;}
+th{background:rgba(255,255,255,0.15);}
 tr:hover{background:rgba(255,255,255,0.1);}
 
-img{
-  width:45px;
-  height:45px;
-  border-radius:50%;
-  vertical-align:middle;
-  margin-right:10px;
-  object-fit:cover;
-}
-
-.nameCell{text-align:left;}
-
-.progressBar{
-  width:100%;
-  height:8px;
-  background:rgba(255,255,255,0.2);
-  border-radius:5px;
-  overflow:hidden;
-  margin-bottom:4px;
-}
-
-.progressFill{
-  height:100%;
-  background:linear-gradient(90deg,#81C784,#4CAF50);
-  transition:width 0.5s ease;
-}
-
-.firstPlace{
-  background:linear-gradient(90deg,rgba(255,215,0,0.15),transparent);
-}
-
-.secondPlace{
-  background:rgba(192,192,192,0.1);
-}
-
-.thirdPlace{
-  background:rgba(205,127,50,0.1);
-}
-
-.gainUp{color:#81C784;font-weight:bold;}
-.gainDown{color:#EF9A9A;font-weight:bold;}
+canvas{max-width:900px;margin:40px auto;}
 
 #toast{
   position:fixed;
@@ -200,12 +112,6 @@ img{
   font-weight:bold;
   z-index:1000;
 }
-
-canvas{
-  max-width:900px;
-  margin:40px auto;
-}
-
 </style>
 </head>
 
@@ -228,29 +134,9 @@ canvas{
 <div id="countdown"></div>
 
 <div class="stats">
-  <div class="statCard big">
-    <div class="statNumber" id="totalVotes">0</div>
-    <div class="statLabel">Iš viso balsų</div>
-  </div>
-
   <div class="statCard">
-    <div class="statNumber" id="votesPerMinute">0</div>
-    <div class="statLabel">⚡ Balsų per minutę</div>
-  </div>
-
-  <div class="statCard">
-    <div class="statNumber" id="leaderGap">0</div>
-    <div class="statLabel">🥇 Atotrūkis</div>
-  </div>
-
-  <div class="statCard">
-    <div class="statNumber" id="fastestGrower">–</div>
-    <div class="statLabel">🚀 Greičiausiai auga</div>
-  </div>
-
-  <div class="statCard">
-    <div class="statNumber" id="leaderPercent">0%</div>
-    <div class="statLabel">🥇 Lyderio dalis</div>
+    <div id="totalVotes">0</div>
+    <div>Iš viso balsų</div>
   </div>
 </div>
 
@@ -259,7 +145,6 @@ canvas{
 <div id="toast"></div>
 
 <script>
-
 let previousVotes = {};
 let previousRanks = {};
 let refreshInterval = 5;
@@ -267,8 +152,7 @@ let timeLeft = refreshInterval;
 let pieChart;
 let player;
 
-/* ===== YouTube API ===== */
-
+/* ===== YouTube ===== */
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('bgVideo');
 }
@@ -291,8 +175,7 @@ document.getElementById("soundBtn").addEventListener("click", function(){
   }
 });
 
-/* ===== Play Button logika ===== */
-
+/* ===== Play Button ===== */
 function getPlayButton(name, song){
   const cleanSong = (song || "").toLowerCase();
 
@@ -307,10 +190,36 @@ function getPlayButton(name, song){
   return "";
 }
 
-/* ===== Toliau VISAS tavo originalus fetch kodas lieka toks pats ===== */
+/* ===== Toast ===== */
+function showToast(text){
+  const toast=document.getElementById("toast");
+  toast.innerText=text;
+  toast.style.display="block";
+  setTimeout(()=>toast.style.display="none",3000);
+}
 
+/* ===== Chart ===== */
+function updatePieChart(top5){
+  const ctx=document.getElementById('pieChart').getContext('2d');
+  let labels=top5.map(c=>c.name);
+  let votes=top5.map(c=>c.votes);
+
+  if(pieChart) pieChart.destroy();
+
+  pieChart=new Chart(ctx,{
+    type:'pie',
+    data:{
+      labels:labels,
+      datasets:[{
+        data:votes
+      }]
+    }
+  });
+}
+
+/* ===== Fetch ===== */
 function fetchData(){
-  fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now(),{cache:"no-store"})
+  fetch("https://www.lrt.lt/api/v1/daily-question/2417?t="+Date.now())
   .then(res=>res.json())
   .then(data=>{
 
@@ -319,80 +228,44 @@ function fetchData(){
       <tr>
         <th>Dalyvis</th>
         <th>Balsai</th>
-        <th>Pokytis</th>
-        <th>%</th>
-        <th>Skirtumas</th>
       </tr>`;
 
     let sorted=data.choices.sort((a,b)=>b.votes-a.votes);
-    let topVotes=sorted[0]?.votes||0;
     let totalVotes=0;
-    let totalGain=0;
-    let fastestGrower={name:"–",gain:0};
 
     sorted.forEach((c,index)=>{
-      let name=c.name.replace(/\/+/g,'');
-      let oldVotes=previousVotes[name]??c.votes;
-      let gain=c.votes-oldVotes;
-
-      let previousRank=previousRanks[name];
-      let comment=generateComment(name,gain,index,previousRank);
-      if(comment) showToast(comment);
-
-      if(gain>fastestGrower.gain){
-        fastestGrower={name:name,gain:gain};
-      }
-
-      totalGain+=gain;
+      let name=c.name;
       totalVotes+=c.votes;
 
-      let diff=index===0?0:topVotes-c.votes;
-
       table.innerHTML+=`
-        <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
-          <td class="nameCell">
-            <img src="${c.image||'https://via.placeholder.com/45'}">
+        <tr>
+          <td>
             <strong>${index+1}. ${name}</strong><br>
             <small>${c.song||''}</small>
             ${getPlayButton(name, c.song)}
           </td>
-          <td>${c.votes.toLocaleString()}</td>
-          <td class="${gain>=0?'gainUp':'gainDown'}">${gain>=0?'+':''}${gain}</td>
-          <td>
-            <div class="progressBar">
-              <div class="progressFill" style="width:${c.percentage}%"></div>
-            </div>
-            ${c.percentage}%
-          </td>
-          <td>${diff.toLocaleString()}</td>
+          <td>${c.votes}</td>
         </tr>`;
-
-      previousVotes[name]=c.votes;
-      previousRanks[name]=index;
     });
 
-    let votesPerMinute=Math.round((totalGain/refreshInterval)*60);
-
-    document.getElementById("totalVotes").innerHTML=totalVotes.toLocaleString();
-    document.getElementById("votesPerMinute").innerHTML=votesPerMinute.toLocaleString();
-    document.getElementById("leaderGap").innerHTML=
-      (sorted[1]? (sorted[0].votes-sorted[1].votes).toLocaleString():0);
-    document.getElementById("fastestGrower").innerHTML=
-      fastestGrower.gain>0 ? fastestGrower.name+" (+"+fastestGrower.gain+")":"–";
-
-    let leaderPercent = totalVotes ? Math.round((sorted[0].votes/totalVotes)*100) : 0;
-    document.getElementById("leaderPercent").innerHTML = leaderPercent + "%";
-
+    document.getElementById("totalVotes").innerText=totalVotes;
     updatePieChart(sorted.slice(0,5));
-
     document.getElementById("lastUpdate").innerHTML=
       "Atsinaujino: "+new Date().toLocaleTimeString();
-    timeLeft=refreshInterval;
   });
 }
 
-/* ===== likęs JS (generateComment, showToast, updatePieChart, interval) paliktas toks pats kaip buvo ===== */
+setInterval(()=>{
+  timeLeft--;
+  if(timeLeft<=0){
+    fetchData();
+    timeLeft=refreshInterval;
+  }
+  document.getElementById("countdown").innerHTML=
+    "Atnaujinama po: "+timeLeft+" s";
+},1000);
 
+fetchData();
 </script>
 
 </body>
