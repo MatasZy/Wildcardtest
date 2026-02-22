@@ -19,13 +19,20 @@ h2 {
 }
 
 #lastUpdate {
-  margin-bottom: 20px;
+  margin-bottom: 5px;
   font-size: 14px;
   opacity: 0.8;
 }
 
+#countdown {
+  font-size: 14px;
+  color: #ffd700;
+  margin-bottom: 15px;
+}
+
 table {
-  width: 90%;
+  width: 95%;
+  max-width: 900px;
   margin: auto;
   border-collapse: collapse;
   background: rgba(255,255,255,0.08);
@@ -40,7 +47,7 @@ th {
 }
 
 td {
-  padding: 10px;
+  padding: 12px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
@@ -49,11 +56,12 @@ tr:hover {
 }
 
 img {
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
   vertical-align: middle;
   margin-right: 10px;
+  object-fit: cover;
 }
 
 .nameCell {
@@ -62,7 +70,8 @@ img {
 
 .gain {
   color: #4cff4c;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: bold;
 }
 
 .totalVotes {
@@ -81,6 +90,7 @@ img {
 
 <h2>🏆 Balsavimo rezultatai</h2>
 <div id="lastUpdate">Atnaujinama...</div>
+<div id="countdown">Atnaujinama po: 10 s</div>
 
 <table id="tbl"></table>
 
@@ -88,7 +98,8 @@ img {
 
 <script>
 let previousVotes = {};
-let countdown = 10;
+let refreshInterval = 10;
+let timeLeft = refreshInterval;
 
 function fetchData() {
   fetch("https://www.lrt.lt/api/v1/daily-question/2417?t=" + new Date().getTime(), {
@@ -113,23 +124,25 @@ function fetchData() {
     `;
 
     let sorted = data.choices.sort((a, b) => b.votes - a.votes);
-    let topVotes = sorted[0].votes;
+    let topVotes = sorted.length > 0 ? sorted[0].votes : 0;
     let totalVotes = 0;
 
     sorted.forEach((c, index) => {
 
-      let oldVotes = previousVotes[c.name] || c.votes;
+      let cleanName = c.name.replace(/\/+/g, '');
+
+      let oldVotes = previousVotes[cleanName] ?? c.votes;
       let gain = c.votes - oldVotes;
 
-      let diff = topVotes - c.votes;
+      let diff = index === 0 ? 0 : topVotes - c.votes;
 
       totalVotes += c.votes;
 
       table.innerHTML += `
         <tr class="${index === 0 ? 'firstPlace' : ''}">
           <td class="nameCell">
-            <img src="${c.image || 'https://via.placeholder.com/40'}">
-            <strong>${c.name}</strong><br>
+            <img src="${c.image || 'https://via.placeholder.com/45'}">
+            <strong>${cleanName}</strong><br>
             <small>${c.song || ''}</small>
           </td>
           <td>${c.votes}</td>
@@ -139,26 +152,31 @@ function fetchData() {
         </tr>
       `;
 
-      previousVotes[c.name] = c.votes;
+      previousVotes[cleanName] = c.votes;
     });
 
     document.getElementById("totalVotes").innerHTML =
       "Iš viso balsų: " + totalVotes;
 
+    timeLeft = refreshInterval;
   })
   .catch(err => {
-    console.error(err);
+    console.error("Klaida:", err);
   });
 }
 
-function startAutoRefresh() {
-  setInterval(() => {
+// Sekundžių skaitiklis
+setInterval(() => {
+  timeLeft--;
+  if (timeLeft <= 0) {
     fetchData();
-  }, 10000);
-}
+  }
+  document.getElementById("countdown").innerHTML =
+    "Atnaujinama po: " + timeLeft + " s";
+}, 1000);
 
+// Pirmas užkrovimas
 fetchData();
-startAutoRefresh();
 </script>
 
 </body>
