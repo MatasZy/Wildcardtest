@@ -34,12 +34,10 @@
   overflow: hidden;
 }
 
-#videoBackground,
-#bgVideo,
-#bgVideo iframe {
+#videoBackground iframe {
   width: 100vw;
   height: 100vh;
-  pointer-events: none;
+  pointer-events: none; /* neklikinamas */
 }
 
 /* OPTIONAL: tamsesnis overlay, kad tekstas matytųsi geriau */
@@ -197,7 +195,13 @@ canvas{
 
 <body>
 <div id="videoBackground">
-  <div id="bgVideo"></div>
+  <iframe 
+    id="bgVideo"
+    src="https://www.youtube.com/embed/N1y7G6UQi_0?autoplay=1&loop=1&playlist=N1y7G6UQi_0&controls=0&enablejsapi=1"
+    frameborder="0"
+    allow="autoplay; fullscreen"
+    allowfullscreen
+  ></iframe>
 </div>
 <h2>🏆 Balsavimo rezultatai</h2>
   <button id="soundBtn">🔊 Įjungti garsą</button>
@@ -308,24 +312,7 @@ function showToast(text){
   toast.style.display="block";
   setTimeout(()=>toast.style.display="none",3000);
 }
-/* ================= VIDEO MAPPING ================= */
 
-const performerVideos = {
-  "Nøra Blu": "N1y7G6UQi_0",
-  "Grete": "hgcP25DYLSw"
-};
-
-function changeBackgroundVideo(name){
-  if(!player) return;
-
-  const videoId = performerVideos[name];
-
-  if(videoId){
-    player.loadVideoById(videoId);
-    player.unMute();
-    player.setVolume(100);
-  }
-}
 /* ================= FETCH ================= */
 
 function fetchData(){
@@ -368,10 +355,7 @@ function fetchData(){
       let diff=index===0?0:topVotes-c.votes;
 
       table.innerHTML+=`
-        <tr 
-  onclick="changeBackgroundVideo('${name.replace(/'/g,"\\'")}')"
-  style="cursor:pointer"
-  class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
+        <tr class="${index===0?'firstPlace':index===1?'secondPlace':index===2?'thirdPlace':''}">
           <td class="nameCell">
             <img src="${c.image||'https://via.placeholder.com/45'}">
             <strong>${index+1}. ${name}</strong><br>
@@ -453,21 +437,7 @@ fetchData();
   let player;
 
 function onYouTubeIframeAPIReady() {
-  player = new YT.Player('bgVideo', {
-    videoId: 'N1y7G6UQi_0', // default video
-    playerVars: {
-      autoplay: 1,
-      controls: 0,
-      loop: 1,
-      playlist: 'N1y7G6UQi_0',
-      modestbranding: 1
-    },
-    events: {
-      onReady: function(event){
-        event.target.mute(); // pradžioje be garso
-      }
-    }
-  });
+  player = new YT.Player('bgVideo');
 }
 
 document.getElementById("soundBtn").addEventListener("click", function(){
