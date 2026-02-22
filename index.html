@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<title>Balsavimo rezultatai</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #141e30, #243b55);
+  color: white;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+}
+
+h2 {
+  margin-bottom: 10px;
+}
+
+#lastUpdate {
+  margin-bottom: 20px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+table {
+  width: 90%;
+  margin: auto;
+  border-collapse: collapse;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th {
+  background: rgba(255,255,255,0.15);
+  padding: 12px;
+}
+
+td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+tr:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 10px;
+}
+
+.nameCell {
+  text-align: left;
+}
+
+.gain {
+  color: #4cff4c;
+  font-size: 12px;
+}
+
+.totalVotes {
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.firstPlace {
+  background: rgba(255,215,0,0.15);
+}
+</style>
+</head>
+
+<body>
+
+<h2>🏆 Balsavimo rezultatai</h2>
+<div id="lastUpdate">Atnaujinama...</div>
+
+<table id="tbl"></table>
+
+<div class="totalVotes" id="totalVotes"></div>
+
+<script>
+let previousVotes = {};
+let countdown = 10;
+
+function fetchData() {
+  fetch("https://www.lrt.lt/api/v1/daily-question/2417?t=" + new Date().getTime(), {
+    cache: "no-store"
+  })
+  .then(res => res.json())
+  .then(data => {
+
+    const table = document.getElementById("tbl");
+    const now = new Date();
+    document.getElementById("lastUpdate").innerHTML =
+      "Paskutinis atnaujinimas: " + now.toLocaleTimeString();
+
+    table.innerHTML = `
+      <tr>
+        <th>Dalyvis</th>
+        <th>Balsai</th>
+        <th>Prieaugis</th>
+        <th>%</th>
+        <th>Skirtumas</th>
+      </tr>
+    `;
+
+    let sorted = data.choices.sort((a, b) => b.votes - a.votes);
+    let topVotes = sorted[0].votes;
+    let totalVotes = 0;
+
+    sorted.forEach((c, index) => {
+
+      let oldVotes = previousVotes[c.name] || c.votes;
+      let gain = c.votes - oldVotes;
+
+      let diff = topVotes - c.votes;
+
+      totalVotes += c.votes;
+
+      table.innerHTML += `
+        <tr class="${index === 0 ? 'firstPlace' : ''}">
+          <td class="nameCell">
+            <img src="${c.image || 'https://via.placeholder.com/40'}">
+            <strong>${c.name}</strong><br>
+            <small>${c.song || ''}</small>
+          </td>
+          <td>${c.votes}</td>
+          <td class="gain">+${gain}</td>
+          <td>${c.percentage}%</td>
+          <td>${diff}</td>
+        </tr>
+      `;
+
+      previousVotes[c.name] = c.votes;
+    });
+
+    document.getElementById("totalVotes").innerHTML =
+      "Iš viso balsų: " + totalVotes;
+
+  })
+  .catch(err => {
+    console.error(err);
+  });
+}
+
+function startAutoRefresh() {
+  setInterval(() => {
+    fetchData();
+  }, 10000);
+}
+
+fetchData();
+startAutoRefresh();
+</script>
+
+</body>
+</html>
